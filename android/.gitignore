@@ -12,3 +12,11 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+*.iml
+.gradle
+.idea
+build/
+local.properties
+.DS_Store
+.env
+
