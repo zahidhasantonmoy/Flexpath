@@ -23,66 +23,75 @@ class HomepageScreen extends StatelessWidget {
       backgroundColor: Colors.blue.shade200,
       body: SafeArea(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            SizedBox(height: 30),
-            Text(
-              'FlexPath',
-              style: TextStyle(
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 2.0,
+            // Main content centered in the middle of the screen
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min, // Minimize the column size to fit content
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'FlexPath',
+                      style: TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 2.0,
+                      ),
+                    ),
+                    SizedBox(height: 40),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pushNamed(context, '/signIn');
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(vertical: 15, horizontal: 100),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.teal, Colors.green],
+                          ),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: Text(
+                          'Sign In',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pushNamed(context, '/signUp');
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(vertical: 15, horizontal: 100),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.green, Colors.yellow],
+                          ),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: Text(
+                          'Sign Up',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            SizedBox(height: 40),
-            GestureDetector(
-              onTap: () {
-                Navigator.pushNamed(context, '/signIn');
-              },
-              child: Container(
-                padding: EdgeInsets.symmetric(vertical: 15, horizontal: 100),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.teal, Colors.green],
-                  ),
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Text(
-                  'Sign In',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(height: 20),
-            GestureDetector(
-              onTap: () {
-                Navigator.pushNamed(context, '/signUp');
-              },
-              child: Container(
-                padding: EdgeInsets.symmetric(vertical: 15, horizontal: 100),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.green, Colors.yellow],
-                  ),
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Text(
-                  'Sign Up',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            Spacer(),
+            // Footer at the bottom
             Column(
               children: [
                 GestureDetector(
@@ -136,6 +145,7 @@ class HomepageScreen extends StatelessWidget {
                     style: TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                 ),
+                SizedBox(height: 10),
               ],
             ),
           ],
