@@ -1,0 +1,37 @@
+name: flexpath
+description: "a job listing project"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.2
+
+dependencies:
+
+  supabase_flutter: ^0.2.7
+  image_picker: ^1.0.5
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  lottie: ^1.0.1
+
+  flutter_social_button: 1.1.6+1
+  # Add more dependencies here if needed, for example:
+  # provider: ^6.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/animations/loading_animation.json
+    - assets/flexpath_logo.png
+    - assets/google_icon.png
+    - assets/facebook_icon.png
