@@ -8,14 +8,14 @@ environment:
   sdk: ^3.7.2
 
 dependencies:
+  animations: ^2.0.0
   intl: ^0.17.0
-  supabase_flutter: ^0.2.7
+  supabase_flutter: ^2.8.1
   image_picker: ^1.0.5
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
   lottie: ^1.0.1
-
   flutter_social_button: 1.1.6+1
   # Add more dependencies here if needed, for example:
   # provider: ^6.0.1
@@ -35,3 +35,9 @@ flutter:
     - assets/flexpath_logo.png
     - assets/google_icon.png
     - assets/facebook_icon.png
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700

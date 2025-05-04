@@ -1,20 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart'; // For loading animation
 
-class SplashScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    Future.delayed(Duration(seconds: 3), () {
-      Navigator.pushReplacementNamed(context, '/homepage');
-    });
-    return Scaffold(
-      backgroundColor: Colors.blue.shade200,
-      body: Center(
-        child: Lottie.asset('assets/animations/loading_animation.json'),
-      ),
-    );
-  }
-}
+
 
 class HomepageScreen extends StatelessWidget {
   @override

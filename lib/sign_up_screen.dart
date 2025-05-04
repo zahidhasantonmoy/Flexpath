@@ -2,11 +2,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart'; // For date formatting
+import 'package:intl/intl.dart';
 
 class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({super.key});
+
   @override
-  _SignUpScreenState createState() => _SignUpScreenState();
+  State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
@@ -55,47 +57,109 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return filePath;
   }
 
+  bool _isValidEmail(String email) {
+    // Enhanced email validation to match Supabase requirements
+    final emailRegex = RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    );
+    if (!emailRegex.hasMatch(email)) return false;
+    // Ensure local part (before @) is at least 3 characters
+    final localPart = email.split('@')[0];
+    if (localPart.length < 3) return false;
+    // Ensure no consecutive dots or invalid characters
+    if (localPart.contains('..') || localPart.startsWith('.') || localPart.endsWith('.')) return false;
+    return true;
+  }
+
   Future<void> _signUp() async {
-    if (passwordController.text != confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Passwords do not match')));
+    final email = emailController.text.trim().toLowerCase();
+    final password = passwordController.text;
+
+    if (password != confirmPasswordController.text) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Passwords do not match')),
+        );
+      }
       return;
     }
 
-    final profileImagePath = await _uploadImage(profileImage, 'profile-pictures');
-    final nidImagePath = await _uploadImage(nidImage, 'nid-verifications');
+    if (email.isEmpty || !_isValidEmail(email)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Please enter a valid email (e.g., example@gmail.com)')),
+        );
+      }
+      return;
+    }
 
-    final userData = {
-      'full_name': fullNameController.text,
-      'mobile_number': mobileController.text,
-      'email': emailController.text.isEmpty ? null : emailController.text,
-      'date_of_birth': dobController.text,
-      'nid_number': nidController.text,
-      'profile_image': profileImagePath,
-      'district': districtController.text,
-      'upazila': upazilaController.text,
-      'password': passwordController.text,
-      'user_type': userType,
-      'verification_status': verificationStatus,
-      'created_at': DateTime.now().toIso8601String(),
-      'skills': userType == 'worker' ? skillsController.text.split(',') : null,
-      'primary_occupation': userType == 'worker' ? occupationController.text : null,
-      'available_hours': userType == 'worker' ? availableHoursController.text : null,
-      'expected_compensation': userType == 'worker' ? compensationController.text : null,
-      'transportation': userType == 'worker' ? transportationController.text : null,
-      'education': userType == 'worker' ? educationController.text : null,
-      'company_name': userType == 'employer' ? companyNameController.text : null,
-      'business_reg_number': userType == 'employer' ? businessRegController.text : null,
-      'industry_sector': userType == 'employer' ? industryController.text : null,
-      'company_size': userType == 'employer' ? companySizeController.text : null,
-      'office_location': userType == 'employer' ? officeLocationController.text : null,
-      'nid_image': nidImagePath,
-    };
+    if (password.isEmpty || password.length < 6) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Password must be at least 6 characters')),
+        );
+      }
+      return;
+    }
 
-    final response = await supabase.from('users').insert([userData]).execute();
-    if (response.error == null) {
-      Navigator.pushNamed(context, '/signIn');
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sign up failed: ${response.error!.message}')));
+    try {
+      // Sign up the user with Supabase Auth
+      final authResponse = await supabase.auth.signUp(
+        email: email,
+        password: password,
+      );
+
+      if (authResponse.user == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Sign up failed: Unable to create user')),
+          );
+        }
+        return;
+      }
+
+      final profileImagePath = await _uploadImage(profileImage, 'profile-pictures');
+      final nidImagePath = await _uploadImage(nidImage, 'nid-verifications');
+
+      final userData = {
+        'id': authResponse.user!.id,
+        'full_name': fullNameController.text.isEmpty ? null : fullNameController.text,
+        'mobile_number': mobileController.text.isEmpty ? null : mobileController.text,
+        'email': email,
+        'date_of_birth': dobController.text.isEmpty ? null : dobController.text,
+        'nid_number': nidController.text.isEmpty ? null : nidController.text,
+        'profile_image': profileImagePath,
+        'district': districtController.text.isEmpty ? null : districtController.text,
+        'upazila': upazilaController.text.isEmpty ? null : upazilaController.text,
+        'user_type': userType,
+        'verification_status': verificationStatus,
+        'created_at': DateTime.now().toIso8601String(),
+        'skills': userType == 'worker' && skillsController.text.isNotEmpty ? skillsController.text.split(',') : null,
+        'primary_occupation': userType == 'worker' && occupationController.text.isNotEmpty ? occupationController.text : null,
+        'available_hours': userType == 'worker' && availableHoursController.text.isNotEmpty ? availableHoursController.text : null,
+        'expected_compensation': userType == 'worker' && compensationController.text.isNotEmpty ? compensationController.text : null,
+        'transportation': userType == 'worker' && transportationController.text.isNotEmpty ? transportationController.text : null,
+        'education': userType == 'worker' && educationController.text.isNotEmpty ? educationController.text : null,
+        'company_name': userType == 'employer' && companyNameController.text.isNotEmpty ? companyNameController.text : null,
+        'business_reg_number': userType == 'employer' && businessRegController.text.isNotEmpty ? businessRegController.text : null,
+        'industry_sector': userType == 'employer' && industryController.text.isNotEmpty ? industryController.text : null,
+        'company_size': userType == 'employer' && companySizeController.text.isNotEmpty ? companySizeController.text : null,
+        'office_location': userType == 'employer' && officeLocationController.text.isNotEmpty ? officeLocationController.text : null,
+        'nid_image': nidImagePath,
+      };
+
+      // Insert user data into the 'users' table
+      await supabase.from('users').insert(userData);
+
+      if (mounted) {
+        Navigator.pushNamed(context, '/signIn');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sign up failed: $e')),
+        );
+      }
     }
   }
 
@@ -139,45 +203,53 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 SizedBox(height: 40),
                 TextField(
                   controller: fullNameController,
+                  style: TextStyle(color: Colors.black),
                   decoration: InputDecoration(
                     labelText: 'Full Name',
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                     contentPadding: EdgeInsets.all(12),
+                    labelStyle: TextStyle(color: Colors.blueGrey),
                   ),
                 ),
                 SizedBox(height: 16),
                 TextField(
                   controller: mobileController,
+                  style: TextStyle(color: Colors.black),
                   decoration: InputDecoration(
                     labelText: 'Mobile Number',
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                     contentPadding: EdgeInsets.all(12),
+                    labelStyle: TextStyle(color: Colors.blueGrey),
                   ),
                 ),
                 SizedBox(height: 16),
                 TextField(
                   controller: emailController,
+                  style: TextStyle(color: Colors.black),
                   decoration: InputDecoration(
-                    labelText: 'Email Address',
+                    labelText: 'Email Address *',
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                     contentPadding: EdgeInsets.all(12),
+                    labelStyle: TextStyle(color: Colors.blueGrey),
                   ),
                 ),
                 SizedBox(height: 16),
                 TextField(
                   controller: dobController,
+                  style: TextStyle(color: Colors.black),
                   decoration: InputDecoration(
                     labelText: 'Date of Birth',
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                     contentPadding: EdgeInsets.all(12),
+                    labelStyle: TextStyle(color: Colors.blueGrey),
                   ),
                   onTap: () => _selectDate(context),
                 ),
@@ -189,70 +261,80 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     height: 100,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.blueAccent.withOpacity(0.1),
-                      boxShadow: [BoxShadow(color: Colors.blueAccent.withOpacity(0.2), blurRadius: 10)],
+                      color: Colors.blueAccent.withAlpha(26),
+                      boxShadow: [BoxShadow(color: Colors.blueAccent.withAlpha(51), blurRadius: 10)],
                     ),
+                    alignment: Alignment.center,
                     child: profileImage == null
                         ? Icon(Icons.camera_alt, color: Colors.blueAccent, size: 50)
                         : CircleAvatar(backgroundImage: FileImage(File(profileImage!.path)), radius: 50),
-                    alignment: Alignment.center,
                   ),
                 ),
                 SizedBox(height: 16),
                 TextField(
                   controller: districtController,
+                  style: TextStyle(color: Colors.black),
                   decoration: InputDecoration(
                     labelText: 'District',
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                     contentPadding: EdgeInsets.all(12),
+                    labelStyle: TextStyle(color: Colors.blueGrey),
                   ),
                 ),
                 SizedBox(height: 16),
                 TextField(
                   controller: upazilaController,
+                  style: TextStyle(color: Colors.black),
                   decoration: InputDecoration(
                     labelText: 'Upazila',
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                     contentPadding: EdgeInsets.all(12),
+                    labelStyle: TextStyle(color: Colors.blueGrey),
                   ),
                 ),
                 SizedBox(height: 16),
                 TextField(
                   controller: passwordController,
                   obscureText: true,
+                  style: TextStyle(color: Colors.black),
                   decoration: InputDecoration(
-                    labelText: 'Password',
+                    labelText: 'Password *',
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                     contentPadding: EdgeInsets.all(12),
+                    labelStyle: TextStyle(color: Colors.blueGrey),
                   ),
                 ),
                 SizedBox(height: 16),
                 TextField(
                   controller: confirmPasswordController,
                   obscureText: true,
+                  style: TextStyle(color: Colors.black),
                   decoration: InputDecoration(
-                    labelText: 'Confirm Password',
+                    labelText: 'Confirm Password *',
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                     contentPadding: EdgeInsets.all(12),
+                    labelStyle: TextStyle(color: Colors.blueGrey),
                   ),
                 ),
                 SizedBox(height: 16),
                 TextField(
                   controller: nidController,
+                  style: TextStyle(color: Colors.black),
                   decoration: InputDecoration(
                     labelText: 'NID Number',
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                     contentPadding: EdgeInsets.all(12),
+                    labelStyle: TextStyle(color: Colors.blueGrey),
                   ),
                 ),
                 SizedBox(height: 16),
@@ -263,13 +345,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     height: 100,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.grey.withOpacity(0.1),
-                      boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 10)],
+                      color: Colors.grey.withAlpha(26),
+                      boxShadow: [BoxShadow(color: Colors.grey.withAlpha(51), blurRadius: 10)],
                     ),
+                    alignment: Alignment.center,
                     child: nidImage == null
                         ? Icon(Icons.image, color: Colors.grey, size: 50)
                         : CircleAvatar(backgroundImage: FileImage(File(nidImage!.path)), radius: 50),
-                    alignment: Alignment.center,
                   ),
                 ),
                 SizedBox(height: 16),
@@ -278,67 +360,79 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     children: [
                       TextField(
                         controller: skillsController,
+                        style: TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           labelText: 'Skills (comma-separated)',
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                           contentPadding: EdgeInsets.all(12),
+                          labelStyle: TextStyle(color: Colors.blueGrey),
                         ),
                       ),
                       SizedBox(height: 16),
                       TextField(
                         controller: occupationController,
+                        style: TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           labelText: 'Primary Occupation',
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                           contentPadding: EdgeInsets.all(12),
+                          labelStyle: TextStyle(color: Colors.blueGrey),
                         ),
                       ),
                       SizedBox(height: 16),
                       TextField(
                         controller: availableHoursController,
+                        style: TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           labelText: 'Available Hours',
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                           contentPadding: EdgeInsets.all(12),
+                          labelStyle: TextStyle(color: Colors.blueGrey),
                         ),
                       ),
                       SizedBox(height: 16),
                       TextField(
                         controller: compensationController,
+                        style: TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           labelText: 'Expected Compensation',
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                           contentPadding: EdgeInsets.all(12),
+                          labelStyle: TextStyle(color: Colors.blueGrey),
                         ),
                       ),
                       SizedBox(height: 16),
                       TextField(
                         controller: transportationController,
+                        style: TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           labelText: 'Transportation Options',
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                           contentPadding: EdgeInsets.all(12),
+                          labelStyle: TextStyle(color: Colors.blueGrey),
                         ),
                       ),
                       SizedBox(height: 16),
                       TextField(
                         controller: educationController,
+                        style: TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           labelText: 'Educational Qualifications',
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                           contentPadding: EdgeInsets.all(12),
+                          labelStyle: TextStyle(color: Colors.blueGrey),
                         ),
                       ),
                     ],
@@ -348,56 +442,66 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     children: [
                       TextField(
                         controller: companyNameController,
+                        style: TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           labelText: 'Company/Business Name',
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                           contentPadding: EdgeInsets.all(12),
+                          labelStyle: TextStyle(color: Colors.blueGrey),
                         ),
                       ),
                       SizedBox(height: 16),
                       TextField(
                         controller: businessRegController,
+                        style: TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           labelText: 'Business Registration Number',
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                           contentPadding: EdgeInsets.all(12),
+                          labelStyle: TextStyle(color: Colors.blueGrey),
                         ),
                       ),
                       SizedBox(height: 16),
                       TextField(
                         controller: industryController,
+                        style: TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           labelText: 'Industry Sector',
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                           contentPadding: EdgeInsets.all(12),
+                          labelStyle: TextStyle(color: Colors.blueGrey),
                         ),
                       ),
                       SizedBox(height: 16),
                       TextField(
                         controller: companySizeController,
+                        style: TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           labelText: 'Company Size',
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                           contentPadding: EdgeInsets.all(12),
+                          labelStyle: TextStyle(color: Colors.blueGrey),
                         ),
                       ),
                       SizedBox(height: 16),
                       TextField(
                         controller: officeLocationController,
+                        style: TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           labelText: 'Office/Work Location',
                           filled: true,
                           fillColor: Colors.white,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                           contentPadding: EdgeInsets.all(12),
+                          labelStyle: TextStyle(color: Colors.blueGrey),
                         ),
                       ),
                     ],
@@ -416,9 +520,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ElevatedButton(
                   onPressed: _signUp,
                   style: ButtonStyle(
-                    backgroundColor: MaterialStateProperty.all(Colors.green),
-                    padding: MaterialStateProperty.all(EdgeInsets.symmetric(vertical: 16.0, horizontal: 80.0)),
-                    shape: MaterialStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
+                    backgroundColor: WidgetStateProperty.all(Colors.green),
+                    padding: WidgetStateProperty.all(EdgeInsets.symmetric(vertical: 16.0, horizontal: 80.0)),
+                    shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
                   ),
                   child: Text(
                     'Register',

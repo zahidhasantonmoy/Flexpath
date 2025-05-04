@@ -1,34 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'homepage_screen.dart';  // Your homepage screen
-import 'sign_in_screen.dart';   // Your SignIn screen
-import 'sign_up_screen.dart';   // Your SignUp screen
-import 'job_feed_screen.dart';  // Your Job Feed screen
+import 'homepage_screen.dart';
+import 'sign_in_screen.dart';
+import 'sign_up_screen.dart';
+import 'job_feed_screen.dart';
+import 'reset_password_screen.dart';
+import 'job_post_screen.dart';
 
 void main() async {
-  // Initialize Supabase
+  WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
-    url: 'https://eybnfjhttwgestlyiqkx.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5Ym5mamh0dHdnZXN0bHlpcWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxNjQ5MDUsImV4cCI6MjA2MTc0MDkwNX0.GY-HeNqfn6g6LnQ4Fv1Hv79AFhV5p2qFG5sDmjfUU_o',
+    url: 'https://epxapxmlwweiydgitpnq.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVweGFweG1sd3dlaXlkZ2l0cG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzNzE4MjYsImV4cCI6MjA2MTk0NzgyNn0.n67p6qBtxDauTy0rD-9P0rUWhs0Z7FCtWhCz3c7ycWs',
   );
 
-  runApp(FlexPathApp());
+  runApp(const FlexPathApp());
 }
 
 class FlexPathApp extends StatelessWidget {
+  const FlexPathApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'FlexPath',
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF1A1A2E),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF0F3460),
+          titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Poppins',
+          ),
+        ),
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
+          bodyMedium: TextStyle(color: Colors.white70, fontFamily: 'Poppins'),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.teal,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
       ),
-      debugShowCheckedModeBanner: false, // Disable debug banner
-      home: HomepageScreen(),  // Your homepage screen
+      debugShowCheckedModeBanner: false,
+      home: HomepageScreen(), // Removed const here
       routes: {
-        '/signIn': (context) => SignInScreen(),  // Route to Sign In
-        '/signUp': (context) => SignUpScreen(),  // Route to Sign Up
-        '/jobFeed': (context) => JobFeedScreen(), // Add Job Feed screen route
+        '/homepage': (context) => HomepageScreen(), // Removed const here as well
+        '/signIn': (context) => SignInScreen(),
+        '/signUp': (context) => SignUpScreen(),
+        '/jobFeed': (context) => JobFeedScreen(),
+        '/reset-password': (context) => ResetPasswordScreen(),
+        '/jobPost': (context) => JobPostScreen(),
       },
     );
   }

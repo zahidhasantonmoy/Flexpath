@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'job_feed_screen.dart'; // Import the Job Feed screen
+import 'job_feed_screen.dart'; // Replace with your actual home screen
 
 class SignInScreen extends StatefulWidget {
+  const SignInScreen({super.key});
+
   @override
-  _SignInScreenState createState() => _SignInScreenState();
+  State<SignInScreen> createState() => _SignInScreenState();
 }
 
 class _SignInScreenState extends State<SignInScreen> {
@@ -12,90 +14,100 @@ class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  // Sign In logic (replace with actual authentication)
   Future<void> _signIn() async {
-    final response = await supabase
-        .from('users')
-        .select()
-        .eq('email', emailController.text)
-        .eq('password', passwordController.text)
-        .single()
-        .execute();
-
-    if (response.error == null && response.data != null) {
-      print('User signed in: ${emailController.text}');
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => JobFeedScreen()), // Navigate to Job Feed
+    try {
+      // Call the sign-in method using Supabase Authentication
+      final response = await supabase.auth.signInWithPassword(
+        email: emailController.text,
+        password: passwordController.text,
       );
-    } else {
-      print('Error signing in: ${response.error!.message}');
+
+      if (response.user != null) {
+        // If sign-in is successful, navigate to the home screen (e.g., job feed)
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => JobFeedScreen()), // Replace with your home screen
+        );
+      } else {
+        // Display error if credentials are invalid
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sign in failed: Invalid credentials')),
+        );
+      }
+    } catch (e) {
+      // Handle errors that occur during sign-in
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sign in failed: $e')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue.shade50,
-      body: Padding(
+      body: SingleChildScrollView(
         padding: EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            SizedBox(height: 100),
+            // Title
             Text(
-              'Sign In',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              'Sign In to FlexPath',
+              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 20),
-            // Email Input Field
+            SizedBox(height: 40),
+
+            // Email input field
             TextField(
               controller: emailController,
               decoration: InputDecoration(
                 labelText: 'Email',
-                labelStyle: TextStyle(color: Colors.blueAccent),
                 filled: true,
                 fillColor: Colors.white,
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.blueAccent),
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                contentPadding: EdgeInsets.all(12),
               ),
             ),
             SizedBox(height: 16),
-            // Password Input Field
+
+            // Password input field
             TextField(
               controller: passwordController,
               obscureText: true,
               decoration: InputDecoration(
                 labelText: 'Password',
-                labelStyle: TextStyle(color: Colors.blueAccent),
                 filled: true,
                 fillColor: Colors.white,
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.blueAccent),
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                contentPadding: EdgeInsets.all(12),
+              ),
+            ),
+            SizedBox(height: 30),
+
+            // Forgot password link
+            Align(
+              alignment: Alignment.centerRight,
+              child: GestureDetector(
+                onTap: () {
+                  // Navigate to Forgot Password Screen
+                  Navigator.pushNamed(context, '/reset-password'); // Ensure this route exists in your app
+                },
+                child: Text(
+                  'Forgot Password?',
+                  style: TextStyle(color: Colors.blueAccent, fontSize: 14),
                 ),
               ),
             ),
             SizedBox(height: 30),
-            // Sign In Button
+
+            // Sign-in button
             ElevatedButton(
               onPressed: _signIn,
-              style: ButtonStyle(
-                backgroundColor: MaterialStateProperty.all(Colors.blueAccent),
-                padding: MaterialStateProperty.all(EdgeInsets.symmetric(vertical: 16.0, horizontal: 80.0)),
-                shape: MaterialStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
-              ),
-              child: Text(
-                'Sign In',
-                style: TextStyle(color: Colors.white, fontSize: 16),
+              child: Text('Sign In'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 80.0),
               ),
             ),
           ],
