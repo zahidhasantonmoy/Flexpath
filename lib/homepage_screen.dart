@@ -1,123 +1,218 @@
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart'; // For loading animation
-
-
+import 'package:animate_do/animate_do.dart';
 
 class HomepageScreen extends StatelessWidget {
+  const HomepageScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue.shade200,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Main content centered in the middle of the screen
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min, // Minimize the column size to fit content
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      'FlexPath',
-                      style: TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 2.0,
-                      ),
-                    ),
-                    SizedBox(height: 40),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.pushNamed(context, '/signIn');
-                      },
-                      child: Container(
-                        padding: EdgeInsets.symmetric(vertical: 15, horizontal: 100),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Colors.teal, Colors.green],
-                          ),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Text(
-                          'Sign In',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 20),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.pushNamed(context, '/signUp');
-                      },
-                      child: Container(
-                        padding: EdgeInsets.symmetric(vertical: 15, horizontal: 100),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Colors.green, Colors.yellow],
-                          ),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Text(
-                          'Sign Up',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // Footer at the bottom
-            Column(
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: Text('About Us'),
-                          content: Text(
-                            'FlexPath is a mobile-first platform designed to connect workers and employers for flexible, short-term gigs. Focused on the unique needs of Bangladesh, it provides an accessible solution for individuals looking to monetize their idle hours while giving employers access to a pool of local talent for micro-tasks. Whether you\'re a student looking for part-time work, a rural artisan seeking to showcase your crafts, or a small business in need of quick assistance, FlexPath bridges the gap. With features like job feeds, user profiles, real-time messaging, and local payment integration through Bkash, FlexPath aims to redefine the gig economy by offering a simple, secure, and empowering platform for Bangladesh’s diverse workforce.',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              },
-                              child: Text('Close'),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.blue.shade100, Colors.white],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Column(
+                children: [
+                  // Main content centered in the middle of the screen
+                  Expanded(
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          FadeInDown(
+                            duration: Duration(milliseconds: 800),
+                            child: Text(
+                              'FlexPath',
+                              style: TextStyle(
+                                fontSize: 48,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blueGrey[700],
+                                letterSpacing: 2.0,
+                                shadows: [
+                                  Shadow(
+                                    blurRadius: 10,
+                                    color: Colors.blueAccent.withAlpha(77),
+                                    offset: Offset(0, 3),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ],
-                        );
-                      },
-                    );
-                  },
-                  child: Text(
-                    'About Us',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                          ),
+                          SizedBox(height: 40),
+                          FadeInUp(
+                            duration: Duration(milliseconds: 800),
+                            delay: Duration(milliseconds: 200),
+                            child: ZoomIn(
+                              duration: Duration(milliseconds: 300),
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.pushNamed(context, '/signIn');
+                                },
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(vertical: 15, horizontal: 100),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [Colors.teal, Colors.green],
+                                    ),
+                                    borderRadius: BorderRadius.circular(30),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.green.withAlpha(128),
+                                        blurRadius: 10,
+                                        offset: Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.login, color: Colors.white, size: 20),
+                                      SizedBox(width: 10),
+                                      Text(
+                                        'Sign In',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 20),
+                          FadeInUp(
+                            duration: Duration(milliseconds: 800),
+                            delay: Duration(milliseconds: 300),
+                            child: ZoomIn(
+                              duration: Duration(milliseconds: 300),
+                              child: GestureDetector(
+                                onTap: () {
+                                  Navigator.pushNamed(context, '/signUp');
+                                },
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(vertical: 15, horizontal: 100),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [Colors.green, Colors.yellow],
+                                    ),
+                                    borderRadius: BorderRadius.circular(30),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.yellow.withAlpha(128),
+                                        blurRadius: 10,
+                                        offset: Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.person_add, color: Colors.white, size: 20),
+                                      SizedBox(width: 10),
+                                      Text(
+                                        'Sign Up',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                SizedBox(height: 10),
-                GestureDetector(
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: Text('Terms & Conditions'),
-                          content: Text(
-                            '''Acceptance of Terms
+                  // Footer at the bottom
+                  Column(
+                    children: [
+                      FadeInUp(
+                        duration: Duration(milliseconds: 800),
+                        delay: Duration(milliseconds: 400),
+                        child: GestureDetector(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  backgroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                  title: Row(
+                                    children: [
+                                      Icon(Icons.info, color: Colors.blueAccent, size: 30),
+                                      SizedBox(width: 10),
+                                      Text('About Us', style: TextStyle(color: Colors.blueGrey[700], fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                  content: Text(
+                                    'FlexPath is a mobile-first platform designed to connect workers and employers for flexible, short-term gigs. Focused on the unique needs of Bangladesh, it provides an accessible solution for individuals looking to monetize their idle hours while giving employers access to a pool of local talent for micro-tasks. Whether you\'re a student looking for part-time work, a rural artisan seeking to showcase your crafts, or a small business in need of quick assistance, FlexPath bridges the gap. With features like job feeds, user profiles, real-time messaging, and local payment integration through Bkash, FlexPath aims to redefine the gig economy by offering a simple, secure, and empowering platform for Bangladesh’s diverse workforce.',
+                                    style: TextStyle(color: Colors.blueGrey[600]),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: Text('Close', style: TextStyle(color: Colors.blueAccent)),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                          child: Bounce(
+                            duration: Duration(milliseconds: 500),
+                            child: Text(
+                              'About Us',
+                              style: TextStyle(
+                                color: Colors.blueGrey[700],
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      FadeInUp(
+                        duration: Duration(milliseconds: 800),
+                        delay: Duration(milliseconds: 500),
+                        child: GestureDetector(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  backgroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                  title: Row(
+                                    children: [
+                                      Icon(Icons.description, color: Colors.blueAccent, size: 30),
+                                      SizedBox(width: 10),
+                                      Text('Terms & Conditions', style: TextStyle(color: Colors.blueGrey[700], fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                  content: SingleChildScrollView(
+                                    child: Text(
+                                      '''Acceptance of Terms
 By accessing or using the FlexPath application, you agree to comply with and be bound by the following terms and conditions. If you do not agree with these terms, do not use the App.
 
 User Registration
@@ -158,28 +253,42 @@ Governing Law
 These Terms and Conditions are governed by the laws of Bangladesh. Any disputes will be resolved in the appropriate courts in Bangladesh.
 
 For more details or inquiries, please contact FlexPath support at monekostomathanosto@gmail.com''',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop();
+                                      style: TextStyle(color: Colors.blueGrey[600]),
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: Text('Close', style: TextStyle(color: Colors.blueAccent)),
+                                    ),
+                                  ],
+                                );
                               },
-                              child: Text('Close'),
+                            );
+                          },
+                          child: Bounce(
+                            duration: Duration(milliseconds: 500),
+                            child: Text(
+                              'Terms & Conditions',
+                              style: TextStyle(
+                                color: Colors.blueGrey[700],
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                decoration: TextDecoration.underline,
+                              ),
                             ),
-                          ],
-                        );
-                      },
-                    );
-                  },
-                  child: Text(
-                    'Terms & Conditions',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                    ],
                   ),
-                ),
-                SizedBox(height: 10),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

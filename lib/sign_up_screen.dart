@@ -1,8 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:animate_do/animate_do.dart';
+import 'sign_in_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -13,164 +14,190 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   final SupabaseClient supabase = Supabase.instance.client;
-  final TextEditingController fullNameController = TextEditingController();
-  final TextEditingController mobileController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
-  final TextEditingController dobController = TextEditingController();
-  final TextEditingController nidController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
+  final TextEditingController fullNameController = TextEditingController();
+  final TextEditingController mobileNumberController = TextEditingController();
+  final TextEditingController dateOfBirthController = TextEditingController();
+  final TextEditingController nidNumberController = TextEditingController();
   final TextEditingController districtController = TextEditingController();
   final TextEditingController upazilaController = TextEditingController();
-  XFile? profileImage;
-  String userType = 'worker';
-  String? verificationStatus = 'Pending';
-  final ImagePicker _picker = ImagePicker();
   final TextEditingController skillsController = TextEditingController();
-  final TextEditingController occupationController = TextEditingController();
+  final TextEditingController primaryOccupationController = TextEditingController();
   final TextEditingController availableHoursController = TextEditingController();
-  final TextEditingController compensationController = TextEditingController();
+  final TextEditingController expectedCompensationController = TextEditingController();
   final TextEditingController transportationController = TextEditingController();
   final TextEditingController educationController = TextEditingController();
   final TextEditingController companyNameController = TextEditingController();
-  final TextEditingController businessRegController = TextEditingController();
-  final TextEditingController industryController = TextEditingController();
+  final TextEditingController businessRegNumberController = TextEditingController();
+  final TextEditingController industrySectorController = TextEditingController();
   final TextEditingController companySizeController = TextEditingController();
   final TextEditingController officeLocationController = TextEditingController();
-  XFile? nidImage;
 
-  Future<void> _pickProfileImage() async {
-    final XFile? pickedImage = await _picker.pickImage(source: ImageSource.gallery);
-    setState(() => profileImage = pickedImage);
+  String userType = 'Job Seeker';
+  File? profileImage;
+  File? nidImage;
+  bool _isLoading = false;
+
+  Future<void> _pickImage({required bool isProfile}) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        if (isProfile) {
+          profileImage = File(pickedFile.path);
+        } else {
+          nidImage = File(pickedFile.path);
+        }
+      });
+    }
   }
 
-  Future<void> _pickNidImage() async {
-    final XFile? pickedImage = await _picker.pickImage(source: ImageSource.gallery);
-    setState(() => nidImage = pickedImage);
-  }
-
-  Future<String?> _uploadImage(XFile? image, String pathPrefix) async {
-    if (image == null) return null;
-    final fileName = '${DateTime.now().millisecondsSinceEpoch}.png';
-    final filePath = '$pathPrefix/$fileName';
-    await supabase.storage.from(pathPrefix).upload(filePath, File(image.path));
-    return filePath;
-  }
-
-  bool _isValidEmail(String email) {
-    // Enhanced email validation to match Supabase requirements
-    final emailRegex = RegExp(
-      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-    );
-    if (!emailRegex.hasMatch(email)) return false;
-    // Ensure local part (before @) is at least 3 characters
-    final localPart = email.split('@')[0];
-    if (localPart.length < 3) return false;
-    // Ensure no consecutive dots or invalid characters
-    if (localPart.contains('..') || localPart.startsWith('.') || localPart.endsWith('.')) return false;
-    return true;
+  Future<String?> _uploadImage(File image, String bucket, String path) async {
+    try {
+      final response = await supabase.storage.from(bucket).upload(path, image);
+      return response;
+    } catch (e) {
+      _showErrorDialog('Image upload failed: $e');
+      return null;
+    }
   }
 
   Future<void> _signUp() async {
+    setState(() => _isLoading = true);
+
     final email = emailController.text.trim().toLowerCase();
     final password = passwordController.text;
+    final confirmPassword = confirmPasswordController.text;
 
-    if (password != confirmPasswordController.text) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Passwords do not match')),
-        );
-      }
+    if (email.isEmpty || password.isEmpty) {
+      _showErrorDialog('Email and password are required');
+      setState(() => _isLoading = false);
       return;
     }
 
-    if (email.isEmpty || !_isValidEmail(email)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Please enter a valid email (e.g., example@gmail.com)')),
-        );
-      }
+    if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(email)) {
+      _showErrorDialog('Please enter a valid email address');
+      setState(() => _isLoading = false);
       return;
     }
 
-    if (password.isEmpty || password.length < 6) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Password must be at least 6 characters')),
-        );
-      }
+    if (password.length < 6) {
+      _showErrorDialog('Password must be at least 6 characters');
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    if (password != confirmPassword) {
+      _showErrorDialog('Passwords do not match');
+      setState(() => _isLoading = false);
       return;
     }
 
     try {
-      // Sign up the user with Supabase Auth
-      final authResponse = await supabase.auth.signUp(
-        email: email,
-        password: password,
-      );
+      // Sign up user with Supabase Auth
+      final response = await supabase.auth.signUp(email: email, password: password);
+      final userId = response.user?.id;
 
-      if (authResponse.user == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Sign up failed: Unable to create user')),
-          );
-        }
+      if (userId == null) {
+        _showErrorDialog('Sign up failed: Unable to create user');
+        setState(() => _isLoading = false);
         return;
       }
 
-      final profileImagePath = await _uploadImage(profileImage, 'profile-pictures');
-      final nidImagePath = await _uploadImage(nidImage, 'nid-verifications');
+      // Upload images if provided
+      String? profileImageUrl;
+      String? nidImageUrl;
 
+      if (profileImage != null) {
+        profileImageUrl = await _uploadImage(
+          profileImage!,
+          'profile-pictures',
+          '$userId/profile.jpg',
+        );
+      }
+
+      if (nidImage != null) {
+        nidImageUrl = await _uploadImage(
+          nidImage!,
+          'nid-verifications',
+          '$userId/nid.jpg',
+        );
+      }
+
+      // Prepare user data
       final userData = {
-        'id': authResponse.user!.id,
-        'full_name': fullNameController.text.isEmpty ? null : fullNameController.text,
-        'mobile_number': mobileController.text.isEmpty ? null : mobileController.text,
+        'id': userId,
+        'full_name': fullNameController.text.trim(),
+        'mobile_number': mobileNumberController.text.trim(),
         'email': email,
-        'date_of_birth': dobController.text.isEmpty ? null : dobController.text,
-        'nid_number': nidController.text.isEmpty ? null : nidController.text,
-        'profile_image': profileImagePath,
-        'district': districtController.text.isEmpty ? null : districtController.text,
-        'upazila': upazilaController.text.isEmpty ? null : upazilaController.text,
+        'date_of_birth': dateOfBirthController.text.trim(),
+        'nid_number': nidNumberController.text.trim(),
+        'profile_image': profileImageUrl,
+        'district': districtController.text.trim(),
+        'upazila': upazilaController.text.trim(),
         'user_type': userType,
-        'verification_status': verificationStatus,
-        'created_at': DateTime.now().toIso8601String(),
-        'skills': userType == 'worker' && skillsController.text.isNotEmpty ? skillsController.text.split(',') : null,
-        'primary_occupation': userType == 'worker' && occupationController.text.isNotEmpty ? occupationController.text : null,
-        'available_hours': userType == 'worker' && availableHoursController.text.isNotEmpty ? availableHoursController.text : null,
-        'expected_compensation': userType == 'worker' && compensationController.text.isNotEmpty ? compensationController.text : null,
-        'transportation': userType == 'worker' && transportationController.text.isNotEmpty ? transportationController.text : null,
-        'education': userType == 'worker' && educationController.text.isNotEmpty ? educationController.text : null,
-        'company_name': userType == 'employer' && companyNameController.text.isNotEmpty ? companyNameController.text : null,
-        'business_reg_number': userType == 'employer' && businessRegController.text.isNotEmpty ? businessRegController.text : null,
-        'industry_sector': userType == 'employer' && industryController.text.isNotEmpty ? industryController.text : null,
-        'company_size': userType == 'employer' && companySizeController.text.isNotEmpty ? companySizeController.text : null,
-        'office_location': userType == 'employer' && officeLocationController.text.isNotEmpty ? officeLocationController.text : null,
-        'nid_image': nidImagePath,
+        'verification_status': 'pending',
+        'skills': skillsController.text.trim().split(',').map((e) => e.trim()).toList(),
+        'primary_occupation': primaryOccupationController.text.trim(),
+        'available_hours': availableHoursController.text.trim(),
+        'expected_compensation': expectedCompensationController.text.trim(),
+        'transportation': transportationController.text.trim(),
+        'education': educationController.text.trim(),
+        'company_name': companyNameController.text.trim(),
+        'business_reg_number': businessRegNumberController.text.trim(),
+        'industry_sector': industrySectorController.text.trim(),
+        'company_size': companySizeController.text.trim(),
+        'office_location': officeLocationController.text.trim(),
+        'nid_image': nidImageUrl,
       };
 
-      // Insert user data into the 'users' table
+      // Insert user data into the users table
       await supabase.from('users').insert(userData);
 
       if (mounted) {
-        Navigator.pushNamed(context, '/signIn');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sign up successful! Please sign in.')),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => SignInScreen()),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sign up failed: $e')),
-        );
+        _showErrorDialog('Sign up failed: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
 
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
+  void _showErrorDialog(String message) {
+    showDialog(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.redAccent, size: 30),
+            SizedBox(width: 10),
+            Text('Error', style: TextStyle(color: Colors.blueGrey[700], fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text(message, style: TextStyle(color: Colors.blueGrey[600])),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK', style: TextStyle(color: Colors.blueAccent)),
+          ),
+        ],
+      ),
     );
-    if (picked != null) setState(() => dobController.text = DateFormat('yyyy-MM-dd').format(picked));
   }
 
   @override
@@ -185,354 +212,589 @@ class _SignUpScreenState extends State<SignUpScreen> {
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(height: 20),
-                Text(
-                  'Register with FlexPath',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueGrey[700],
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                SizedBox(height: 40),
-                TextField(
-                  controller: fullNameController,
-                  style: TextStyle(color: Colors.black),
-                  decoration: InputDecoration(
-                    labelText: 'Full Name',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                    contentPadding: EdgeInsets.all(12),
-                    labelStyle: TextStyle(color: Colors.blueGrey),
-                  ),
-                ),
-                SizedBox(height: 16),
-                TextField(
-                  controller: mobileController,
-                  style: TextStyle(color: Colors.black),
-                  decoration: InputDecoration(
-                    labelText: 'Mobile Number',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                    contentPadding: EdgeInsets.all(12),
-                    labelStyle: TextStyle(color: Colors.blueGrey),
-                  ),
-                ),
-                SizedBox(height: 16),
-                TextField(
-                  controller: emailController,
-                  style: TextStyle(color: Colors.black),
-                  decoration: InputDecoration(
-                    labelText: 'Email Address *',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                    contentPadding: EdgeInsets.all(12),
-                    labelStyle: TextStyle(color: Colors.blueGrey),
-                  ),
-                ),
-                SizedBox(height: 16),
-                TextField(
-                  controller: dobController,
-                  style: TextStyle(color: Colors.black),
-                  decoration: InputDecoration(
-                    labelText: 'Date of Birth',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                    contentPadding: EdgeInsets.all(12),
-                    labelStyle: TextStyle(color: Colors.blueGrey),
-                  ),
-                  onTap: () => _selectDate(context),
-                ),
-                SizedBox(height: 16),
-                GestureDetector(
-                  onTap: _pickProfileImage,
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.blueAccent.withAlpha(26),
-                      boxShadow: [BoxShadow(color: Colors.blueAccent.withAlpha(51), blurRadius: 10)],
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height),
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(height: 60),
+                        FadeInDown(
+                          duration: Duration(milliseconds: 800),
+                          child: Text(
+                            'Sign Up to FlexPath',
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blueGrey[700],
+                              letterSpacing: 1.5,
+                              shadows: [
+                                Shadow(
+                                  blurRadius: 10,
+                                  color: Colors.blueAccent.withAlpha(77),
+                                  offset: Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 40),
+                        FadeInUp(
+                          duration: Duration(milliseconds: 800),
+                          delay: Duration(milliseconds: 200),
+                          child: TextField(
+                            controller: emailController,
+                            style: TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              labelText: 'Email *',
+                              labelStyle: TextStyle(color: Colors.blueGrey),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(15),
+                                borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                              ),
+                              contentPadding: EdgeInsets.all(12),
+                              prefixIcon: Icon(Icons.email, color: Colors.blueAccent),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        FadeInUp(
+                          duration: Duration(milliseconds: 800),
+                          delay: Duration(milliseconds: 300),
+                          child: TextField(
+                            controller: passwordController,
+                            obscureText: true,
+                            style: TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              labelText: 'Password *',
+                              labelStyle: TextStyle(color: Colors.blueGrey),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(15),
+                                borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                              ),
+                              contentPadding: EdgeInsets.all(12),
+                              prefixIcon: Icon(Icons.lock, color: Colors.blueAccent),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        FadeInUp(
+                          duration: Duration(milliseconds: 800),
+                          delay: Duration(milliseconds: 400),
+                          child: TextField(
+                            controller: confirmPasswordController,
+                            obscureText: true,
+                            style: TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              labelText: 'Confirm Password *',
+                              labelStyle: TextStyle(color: Colors.blueGrey),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(15),
+                                borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                              ),
+                              contentPadding: EdgeInsets.all(12),
+                              prefixIcon: Icon(Icons.lock, color: Colors.blueAccent),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        FadeInUp(
+                          duration: Duration(milliseconds: 800),
+                          delay: Duration(milliseconds: 500),
+                          child: TextField(
+                            controller: fullNameController,
+                            style: TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              labelText: 'Full Name',
+                              labelStyle: TextStyle(color: Colors.blueGrey),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(15),
+                                borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                              ),
+                              contentPadding: EdgeInsets.all(12),
+                              prefixIcon: Icon(Icons.person, color: Colors.blueAccent),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        FadeInUp(
+                          duration: Duration(milliseconds: 800),
+                          delay: Duration(milliseconds: 600),
+                          child: TextField(
+                            controller: mobileNumberController,
+                            style: TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              labelText: 'Mobile Number',
+                              labelStyle: TextStyle(color: Colors.blueGrey),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(15),
+                                borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                              ),
+                              contentPadding: EdgeInsets.all(12),
+                              prefixIcon: Icon(Icons.phone, color: Colors.blueAccent),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        FadeInUp(
+                          duration: Duration(milliseconds: 800),
+                          delay: Duration(milliseconds: 700),
+                          child: TextField(
+                            controller: dateOfBirthController,
+                            style: TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              labelText: 'Date of Birth (YYYY-MM-DD)',
+                              labelStyle: TextStyle(color: Colors.blueGrey),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(15),
+                                borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                              ),
+                              contentPadding: EdgeInsets.all(12),
+                              prefixIcon: Icon(Icons.calendar_today, color: Colors.blueAccent),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        FadeInUp(
+                          duration: Duration(milliseconds: 800),
+                          delay: Duration(milliseconds: 800),
+                          child: TextField(
+                            controller: nidNumberController,
+                            style: TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              labelText: 'NID Number',
+                              labelStyle: TextStyle(color: Colors.blueGrey),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(15),
+                                borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                              ),
+                              contentPadding: EdgeInsets.all(12),
+                              prefixIcon: Icon(Icons.credit_card, color: Colors.blueAccent),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        FadeInUp(
+                          duration: Duration(milliseconds: 800),
+                          delay: Duration(milliseconds: 900),
+                          child: TextField(
+                            controller: districtController,
+                            style: TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              labelText: 'District',
+                              labelStyle: TextStyle(color: Colors.blueGrey),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(15),
+                                borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                              ),
+                              contentPadding: EdgeInsets.all(12),
+                              prefixIcon: Icon(Icons.location_city, color: Colors.blueAccent),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        FadeInUp(
+                          duration: Duration(milliseconds: 800),
+                          delay: Duration(milliseconds: 1000),
+                          child: TextField(
+                            controller: upazilaController,
+                            style: TextStyle(color: Colors.black),
+                            decoration: InputDecoration(
+                              labelText: 'Upazila',
+                              labelStyle: TextStyle(color: Colors.blueGrey),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(15),
+                                borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                              ),
+                              contentPadding: EdgeInsets.all(12),
+                              prefixIcon: Icon(Icons.location_on, color: Colors.blueAccent),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        FadeInUp(
+                          duration: Duration(milliseconds: 800),
+                          delay: Duration(milliseconds: 1100),
+                          child: DropdownButtonFormField<String>(
+                            value: userType,
+                            items: ['Job Seeker', 'Employer']
+                                .map((type) => DropdownMenuItem(value: type, child: Text(type, style: TextStyle(color: Colors.white))))
+                                .toList(),
+                            onChanged: (value) {
+                              setState(() => userType = value!);
+                            },
+                            decoration: InputDecoration(
+                              labelText: 'User Type *',
+                              labelStyle: TextStyle(color: Colors.blueGrey),
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(15),
+                                borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                              ),
+                              contentPadding: EdgeInsets.all(12),
+                              prefixIcon: Icon(Icons.person_pin, color: Colors.blueAccent),
+                            ),
+                          ),
+                        ),
+                        if (userType == 'Job Seeker') ...[
+                          SizedBox(height: 16),
+                          FadeInUp(
+                            duration: Duration(milliseconds: 800),
+                            delay: Duration(milliseconds: 1200),
+                            child: TextField(
+                              controller: skillsController,
+                              style: TextStyle(color: Colors.black),
+                              decoration: InputDecoration(
+                                labelText: 'Skills (comma-separated)',
+                                labelStyle: TextStyle(color: Colors.blueGrey),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                                ),
+                                contentPadding: EdgeInsets.all(12),
+                                prefixIcon: Icon(Icons.build, color: Colors.blueAccent),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          FadeInUp(
+                            duration: Duration(milliseconds: 800),
+                            delay: Duration(milliseconds: 1300),
+                            child: TextField(
+                              controller: primaryOccupationController,
+                              style: TextStyle(color: Colors.black),
+                              decoration: InputDecoration(
+                                labelText: 'Primary Occupation',
+                                labelStyle: TextStyle(color: Colors.blueGrey),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                                ),
+                                contentPadding: EdgeInsets.all(12),
+                                prefixIcon: Icon(Icons.work, color: Colors.blueAccent),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          FadeInUp(
+                            duration: Duration(milliseconds: 800),
+                            delay: Duration(milliseconds: 1400),
+                            child: TextField(
+                              controller: availableHoursController,
+                              style: TextStyle(color: Colors.black),
+                              decoration: InputDecoration(
+                                labelText: 'Available Hours',
+                                labelStyle: TextStyle(color: Colors.blueGrey),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                                ),
+                                contentPadding: EdgeInsets.all(12),
+                                prefixIcon: Icon(Icons.access_time, color: Colors.blueAccent),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          FadeInUp(
+                            duration: Duration(milliseconds: 800),
+                            delay: Duration(milliseconds: 1500),
+                            child: TextField(
+                              controller: expectedCompensationController,
+                              style: TextStyle(color: Colors.black),
+                              decoration: InputDecoration(
+                                labelText: 'Expected Compensation',
+                                labelStyle: TextStyle(color: Colors.blueGrey),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                                ),
+                                contentPadding: EdgeInsets.all(12),
+                                prefixIcon: Icon(Icons.attach_money, color: Colors.blueAccent),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          FadeInUp(
+                            duration: Duration(milliseconds: 800),
+                            delay: Duration(milliseconds: 1600),
+                            child: TextField(
+                              controller: transportationController,
+                              style: TextStyle(color: Colors.black),
+                              decoration: InputDecoration(
+                                labelText: 'Transportation',
+                                labelStyle: TextStyle(color: Colors.blueGrey),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                                ),
+                                contentPadding: EdgeInsets.all(12),
+                                prefixIcon: Icon(Icons.directions_car, color: Colors.blueAccent),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          FadeInUp(
+                            duration: Duration(milliseconds: 800),
+                            delay: Duration(milliseconds: 1700),
+                            child: TextField(
+                              controller: educationController,
+                              style: TextStyle(color: Colors.black),
+                              decoration: InputDecoration(
+                                labelText: 'Education',
+                                labelStyle: TextStyle(color: Colors.blueGrey),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                                ),
+                                contentPadding: EdgeInsets.all(12),
+                                prefixIcon: Icon(Icons.school, color: Colors.blueAccent),
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (userType == 'Employer') ...[
+                          SizedBox(height: 16),
+                          FadeInUp(
+                            duration: Duration(milliseconds: 800),
+                            delay: Duration(milliseconds: 1200),
+                            child: TextField(
+                              controller: companyNameController,
+                              style: TextStyle(color: Colors.black),
+                              decoration: InputDecoration(
+                                labelText: 'Company Name',
+                                labelStyle: TextStyle(color: Colors.blueGrey),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                                ),
+                                contentPadding: EdgeInsets.all(12),
+                                prefixIcon: Icon(Icons.business, color: Colors.blueAccent),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          FadeInUp(
+                            duration: Duration(milliseconds: 800),
+                            delay: Duration(milliseconds: 1300),
+                            child: TextField(
+                              controller: businessRegNumberController,
+                              style: TextStyle(color: Colors.black),
+                              decoration: InputDecoration(
+                                labelText: 'Business Registration Number',
+                                labelStyle: TextStyle(color: Colors.blueGrey),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                                ),
+                                contentPadding: EdgeInsets.all(12),
+                                prefixIcon: Icon(Icons.description, color: Colors.blueAccent),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          FadeInUp(
+                            duration: Duration(milliseconds: 800),
+                            delay: Duration(milliseconds: 1400),
+                            child: TextField(
+                              controller: industrySectorController,
+                              style: TextStyle(color: Colors.black),
+                              decoration: InputDecoration(
+                                labelText: 'Industry Sector',
+                                labelStyle: TextStyle(color: Colors.blueGrey),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                                ),
+                                contentPadding: EdgeInsets.all(12),
+                                prefixIcon: Icon(Icons.factory, color: Colors.blueAccent),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          FadeInUp(
+                            duration: Duration(milliseconds: 800),
+                            delay: Duration(milliseconds: 1500),
+                            child: TextField(
+                              controller: companySizeController,
+                              style: TextStyle(color: Colors.black),
+                              decoration: InputDecoration(
+                                labelText: 'Company Size',
+                                labelStyle: TextStyle(color: Colors.blueGrey),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                                ),
+                                contentPadding: EdgeInsets.all(12),
+                                prefixIcon: Icon(Icons.group, color: Colors.blueAccent),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          FadeInUp(
+                            duration: Duration(milliseconds: 800),
+                            delay: Duration(milliseconds: 1600),
+                            child: TextField(
+                              controller: officeLocationController,
+                              style: TextStyle(color: Colors.black),
+                              decoration: InputDecoration(
+                                labelText: 'Office Location',
+                                labelStyle: TextStyle(color: Colors.blueGrey),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide(color: Colors.blueAccent, width: 2),
+                                ),
+                                contentPadding: EdgeInsets.all(12),
+                                prefixIcon: Icon(Icons.location_on, color: Colors.blueAccent),
+                              ),
+                            ),
+                          ),
+                        ],
+                        SizedBox(height: 16),
+                        FadeInUp(
+                          duration: Duration(milliseconds: 800),
+                          delay: Duration(milliseconds: 1800),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () => _pickImage(isProfile: true),
+                                  style: ButtonStyle(
+                                    backgroundColor: WidgetStateProperty.all(Colors.blueAccent),
+                                    shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                                  ),
+                                  child: Text(
+                                    profileImage == null ? 'Upload Profile Image' : 'Profile Image Selected',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () => _pickImage(isProfile: false),
+                                  style: ButtonStyle(
+                                    backgroundColor: WidgetStateProperty.all(Colors.blueAccent),
+                                    shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                                  ),
+                                  child: Text(
+                                    nidImage == null ? 'Upload NID Image' : 'NID Image Selected',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 30),
+                        FadeInUp(
+                          duration: Duration(milliseconds: 800),
+                          delay: Duration(milliseconds: 1900),
+                          child: ZoomIn(
+                            duration: Duration(milliseconds: 300),
+                            child: ElevatedButton(
+                              onPressed: _isLoading ? null : _signUp,
+                              style: ButtonStyle(
+                                backgroundColor: WidgetStateProperty.all(Colors.green),
+                                padding: WidgetStateProperty.all(EdgeInsets.symmetric(vertical: 16.0, horizontal: 80.0)),
+                                shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
+                                elevation: WidgetStateProperty.all(5),
+                                shadowColor: WidgetStateProperty.all(Colors.green.withAlpha(128)),
+                              ),
+                              child: _isLoading
+                                  ? CircularProgressIndicator(color: Colors.white)
+                                  : Text(
+                                'Sign Up',
+                                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 20),
+                      ],
                     ),
-                    alignment: Alignment.center,
-                    child: profileImage == null
-                        ? Icon(Icons.camera_alt, color: Colors.blueAccent, size: 50)
-                        : CircleAvatar(backgroundImage: FileImage(File(profileImage!.path)), radius: 50),
                   ),
                 ),
-                SizedBox(height: 16),
-                TextField(
-                  controller: districtController,
-                  style: TextStyle(color: Colors.black),
-                  decoration: InputDecoration(
-                    labelText: 'District',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                    contentPadding: EdgeInsets.all(12),
-                    labelStyle: TextStyle(color: Colors.blueGrey),
+              ),
+              Positioned(
+                top: 16,
+                left: 16,
+                child: FadeInLeft(
+                  duration: Duration(milliseconds: 800),
+                  child: IconButton(
+                    icon: Icon(Icons.arrow_back, color: Colors.blueGrey[700], size: 30),
+                    onPressed: () => Navigator.pushReplacementNamed(context, '/homepage'),
                   ),
                 ),
-                SizedBox(height: 16),
-                TextField(
-                  controller: upazilaController,
-                  style: TextStyle(color: Colors.black),
-                  decoration: InputDecoration(
-                    labelText: 'Upazila',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                    contentPadding: EdgeInsets.all(12),
-                    labelStyle: TextStyle(color: Colors.blueGrey),
-                  ),
-                ),
-                SizedBox(height: 16),
-                TextField(
-                  controller: passwordController,
-                  obscureText: true,
-                  style: TextStyle(color: Colors.black),
-                  decoration: InputDecoration(
-                    labelText: 'Password *',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                    contentPadding: EdgeInsets.all(12),
-                    labelStyle: TextStyle(color: Colors.blueGrey),
-                  ),
-                ),
-                SizedBox(height: 16),
-                TextField(
-                  controller: confirmPasswordController,
-                  obscureText: true,
-                  style: TextStyle(color: Colors.black),
-                  decoration: InputDecoration(
-                    labelText: 'Confirm Password *',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                    contentPadding: EdgeInsets.all(12),
-                    labelStyle: TextStyle(color: Colors.blueGrey),
-                  ),
-                ),
-                SizedBox(height: 16),
-                TextField(
-                  controller: nidController,
-                  style: TextStyle(color: Colors.black),
-                  decoration: InputDecoration(
-                    labelText: 'NID Number',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                    contentPadding: EdgeInsets.all(12),
-                    labelStyle: TextStyle(color: Colors.blueGrey),
-                  ),
-                ),
-                SizedBox(height: 16),
-                GestureDetector(
-                  onTap: _pickNidImage,
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.grey.withAlpha(26),
-                      boxShadow: [BoxShadow(color: Colors.grey.withAlpha(51), blurRadius: 10)],
-                    ),
-                    alignment: Alignment.center,
-                    child: nidImage == null
-                        ? Icon(Icons.image, color: Colors.grey, size: 50)
-                        : CircleAvatar(backgroundImage: FileImage(File(nidImage!.path)), radius: 50),
-                  ),
-                ),
-                SizedBox(height: 16),
-                if (userType == 'worker')
-                  Column(
-                    children: [
-                      TextField(
-                        controller: skillsController,
-                        style: TextStyle(color: Colors.black),
-                        decoration: InputDecoration(
-                          labelText: 'Skills (comma-separated)',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                          contentPadding: EdgeInsets.all(12),
-                          labelStyle: TextStyle(color: Colors.blueGrey),
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      TextField(
-                        controller: occupationController,
-                        style: TextStyle(color: Colors.black),
-                        decoration: InputDecoration(
-                          labelText: 'Primary Occupation',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                          contentPadding: EdgeInsets.all(12),
-                          labelStyle: TextStyle(color: Colors.blueGrey),
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      TextField(
-                        controller: availableHoursController,
-                        style: TextStyle(color: Colors.black),
-                        decoration: InputDecoration(
-                          labelText: 'Available Hours',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                          contentPadding: EdgeInsets.all(12),
-                          labelStyle: TextStyle(color: Colors.blueGrey),
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      TextField(
-                        controller: compensationController,
-                        style: TextStyle(color: Colors.black),
-                        decoration: InputDecoration(
-                          labelText: 'Expected Compensation',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                          contentPadding: EdgeInsets.all(12),
-                          labelStyle: TextStyle(color: Colors.blueGrey),
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      TextField(
-                        controller: transportationController,
-                        style: TextStyle(color: Colors.black),
-                        decoration: InputDecoration(
-                          labelText: 'Transportation Options',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                          contentPadding: EdgeInsets.all(12),
-                          labelStyle: TextStyle(color: Colors.blueGrey),
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      TextField(
-                        controller: educationController,
-                        style: TextStyle(color: Colors.black),
-                        decoration: InputDecoration(
-                          labelText: 'Educational Qualifications',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                          contentPadding: EdgeInsets.all(12),
-                          labelStyle: TextStyle(color: Colors.blueGrey),
-                        ),
-                      ),
-                    ],
-                  ),
-                if (userType == 'employer')
-                  Column(
-                    children: [
-                      TextField(
-                        controller: companyNameController,
-                        style: TextStyle(color: Colors.black),
-                        decoration: InputDecoration(
-                          labelText: 'Company/Business Name',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                          contentPadding: EdgeInsets.all(12),
-                          labelStyle: TextStyle(color: Colors.blueGrey),
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      TextField(
-                        controller: businessRegController,
-                        style: TextStyle(color: Colors.black),
-                        decoration: InputDecoration(
-                          labelText: 'Business Registration Number',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                          contentPadding: EdgeInsets.all(12),
-                          labelStyle: TextStyle(color: Colors.blueGrey),
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      TextField(
-                        controller: industryController,
-                        style: TextStyle(color: Colors.black),
-                        decoration: InputDecoration(
-                          labelText: 'Industry Sector',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                          contentPadding: EdgeInsets.all(12),
-                          labelStyle: TextStyle(color: Colors.blueGrey),
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      TextField(
-                        controller: companySizeController,
-                        style: TextStyle(color: Colors.black),
-                        decoration: InputDecoration(
-                          labelText: 'Company Size',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                          contentPadding: EdgeInsets.all(12),
-                          labelStyle: TextStyle(color: Colors.blueGrey),
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      TextField(
-                        controller: officeLocationController,
-                        style: TextStyle(color: Colors.black),
-                        decoration: InputDecoration(
-                          labelText: 'Office/Work Location',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-                          contentPadding: EdgeInsets.all(12),
-                          labelStyle: TextStyle(color: Colors.blueGrey),
-                        ),
-                      ),
-                    ],
-                  ),
-                SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('Worker'),
-                    Radio(value: 'worker', groupValue: userType, onChanged: (value) => setState(() => userType = value!)),
-                    Text('Employer'),
-                    Radio(value: 'employer', groupValue: userType, onChanged: (value) => setState(() => userType = value!)),
-                  ],
-                ),
-                SizedBox(height: 30),
-                ElevatedButton(
-                  onPressed: _signUp,
-                  style: ButtonStyle(
-                    backgroundColor: WidgetStateProperty.all(Colors.green),
-                    padding: WidgetStateProperty.all(EdgeInsets.symmetric(vertical: 16.0, horizontal: 80.0)),
-                    shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
-                  ),
-                  child: Text(
-                    'Register',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                ),
-                SizedBox(height: 20),
-                Text('Verification Status: $verificationStatus', style: TextStyle(color: Colors.grey)),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
