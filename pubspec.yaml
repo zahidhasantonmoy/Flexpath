@@ -8,6 +8,7 @@ environment:
   sdk: ^3.7.2
 
 dependencies:
+  cached_network_image: ^3.3.1
   animate_do: ^4.2.0
   animations: ^2.0.0
   intl: ^0.17.0
