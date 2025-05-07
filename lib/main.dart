@@ -11,6 +11,7 @@ import 'search_screen.dart';
 import 'view_profile_screen.dart';
 import 'rating_feedback_screen.dart';
 import 'payment_screen.dart';
+import 'dashboard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,6 +67,7 @@ class FlexPathApp extends StatelessWidget {
         '/search': (context) => SearchScreen(),
         '/ratingFeedback': (context) => RatingFeedbackScreen(),
         '/payment': (context) => PaymentScreen(),
+        '/dashboard': (context) => DashboardScreen(),
         '/viewProfile': (context) {
           final args = ModalRoute.of(context)!.settings.arguments as String;
           return ViewProfileScreen(userId: args);

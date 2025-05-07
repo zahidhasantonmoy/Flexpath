@@ -28,6 +28,7 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
   String? _sortBy;
   final ScrollController _scrollController = ScrollController();
   final Map<String, List<Map<String, dynamic>>> _jobCache = {};
+  bool _showFilter = false;
 
   // Predefined filter options (aligned with JobPostScreen)
   final List<String> _locations = [
@@ -161,6 +162,7 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
     _page = 0;
     _hasMore = true;
     _fetchJobs();
+    setState(() => _showFilter = false);
   }
 
   String _getCacheKey() {
@@ -185,6 +187,314 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
     return Icon(FontAwesomeIcons.briefcase, color: Colors.teal, size: 40);
   }
 
+  Widget _buildFilterDialog() {
+    return AnimatedPositioned(
+      duration: Duration(milliseconds: 300),
+      top: _showFilter ? 0 : -MediaQuery.of(context).size.height,
+      left: 0,
+      right: 0,
+      height: MediaQuery.of(context).size.height,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.blue.shade100, Colors.white],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Card(
+                elevation: 8,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  side: BorderSide(color: Colors.teal.withOpacity(0.3), width: 1),
+                ),
+                color: Colors.white.withOpacity(0.95),
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FadeInDown(
+                        duration: Duration(milliseconds: 800),
+                        child: Text(
+                          'Filter Jobs',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blueGrey[700],
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedLocation,
+                              decoration: InputDecoration(
+                                labelText: 'Location',
+                                labelStyle: TextStyle(color: Colors.blueGrey[700]),
+                                filled: true,
+                                fillColor: Colors.white.withOpacity(0.9),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide.none,
+                                ),
+                                prefixIcon: Icon(FontAwesomeIcons.mapMarkerAlt, color: Colors.teal),
+                              ),
+                              items: _locations.map((location) {
+                                return DropdownMenuItem<String>(
+                                  value: location,
+                                  child: Text(location, style: TextStyle(fontFamily: 'Poppins')),
+                                );
+                              }).toList(),
+                              onChanged: (value) => setState(() => _selectedLocation = value),
+                              dropdownColor: Colors.white,
+                              isExpanded: true,
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedJobType,
+                              decoration: InputDecoration(
+                                labelText: 'Job Type',
+                                labelStyle: TextStyle(color: Colors.blueGrey[700]),
+                                filled: true,
+                                fillColor: Colors.white.withOpacity(0.9),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide.none,
+                                ),
+                                prefixIcon: Icon(FontAwesomeIcons.clock, color: Colors.teal),
+                              ),
+                              items: _jobTypes.map((type) {
+                                return DropdownMenuItem<String>(
+                                  value: type,
+                                  child: Text(type, style: TextStyle(fontFamily: 'Poppins')),
+                                );
+                              }).toList(),
+                              onChanged: (value) => setState(() => _selectedJobType = value),
+                              dropdownColor: Colors.white,
+                              isExpanded: true,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _selectedJobCategory,
+                              decoration: InputDecoration(
+                                labelText: 'Job Category',
+                                labelStyle: TextStyle(color: Colors.blueGrey[700]),
+                                filled: true,
+                                fillColor: Colors.white.withOpacity(0.9),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide.none,
+                                ),
+                                prefixIcon: Icon(FontAwesomeIcons.tag, color: Colors.teal),
+                              ),
+                              items: _jobCategories.map((category) {
+                                return DropdownMenuItem<String>(
+                                  value: category,
+                                  child: Text(category, style: TextStyle(fontFamily: 'Poppins')),
+                                );
+                              }).toList(),
+                              onChanged: (value) => setState(() => _selectedJobCategory = value),
+                              dropdownColor: Colors.white,
+                              isExpanded: true,
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              decoration: InputDecoration(
+                                labelText: 'Search (Title/Skills)',
+                                labelStyle: TextStyle(color: Colors.blueGrey[700]),
+                                filled: true,
+                                fillColor: Colors.white.withOpacity(0.9),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide.none,
+                                ),
+                                prefixIcon: Icon(FontAwesomeIcons.search, color: Colors.teal),
+                              ),
+                              style: TextStyle(fontFamily: 'Poppins'),
+                              onChanged: (value) => setState(() => _searchQuery = value),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              decoration: InputDecoration(
+                                labelText: 'Min Salary (BDT)',
+                                labelStyle: TextStyle(color: Colors.blueGrey[700]),
+                                filled: true,
+                                fillColor: Colors.white.withOpacity(0.9),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide.none,
+                                ),
+                                prefixIcon: Icon(FontAwesomeIcons.moneyBillWave, color: Colors.teal),
+                              ),
+                              keyboardType: TextInputType.number,
+                              style: TextStyle(fontFamily: 'Poppins'),
+                              onChanged: (value) => setState(() => _minSalary = value),
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              decoration: InputDecoration(
+                                labelText: 'Max Salary (BDT)',
+                                labelStyle: TextStyle(color: Colors.blueGrey[700]),
+                                filled: true,
+                                fillColor: Colors.white.withOpacity(0.9),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide.none,
+                                ),
+                                prefixIcon: Icon(FontAwesomeIcons.moneyBillWave, color: Colors.teal),
+                              ),
+                              keyboardType: TextInputType.number,
+                              style: TextStyle(fontFamily: 'Poppins'),
+                              onChanged: (value) => setState(() => _maxSalary = value),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                final range = await showDateRangePicker(
+                                  context: context,
+                                  firstDate: DateTime(2025, 1, 1),
+                                  lastDate: DateTime(2025, 12, 31),
+                                  initialDateRange: _selectedDateRange,
+                                  builder: (context, child) => Theme(
+                                    data: ThemeData.light().copyWith(
+                                      colorScheme: ColorScheme.light(
+                                        primary: Colors.teal,
+                                        onPrimary: Colors.white,
+                                        surface: Colors.white,
+                                        onSurface: Colors.blueGrey[700]!,
+                                      ),
+                                    ),
+                                    child: child!,
+                                  ),
+                                );
+                                if (range != null) setState(() => _selectedDateRange = range);
+                              },
+                              style: ButtonStyle(
+                                backgroundColor: WidgetStateProperty.all(Colors.teal),
+                                shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                                padding: WidgetStateProperty.all(EdgeInsets.symmetric(vertical: 16)),
+                              ),
+                              child: Text(
+                                _selectedDateRange == null ? 'Select Date Range' : 'Date Range Set',
+                                style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              value: _sortBy,
+                              decoration: InputDecoration(
+                                labelText: 'Sort By',
+                                labelStyle: TextStyle(color: Colors.blueGrey[700]),
+                                filled: true,
+                                fillColor: Colors.white.withOpacity(0.9),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  borderSide: BorderSide.none,
+                                ),
+                                prefixIcon: Icon(FontAwesomeIcons.sort, color: Colors.teal),
+                              ),
+                              items: _sortOptions.map((sort) {
+                                return DropdownMenuItem<String>(
+                                  value: sort,
+                                  child: Text(
+                                    sort == 'salary_asc' ? 'Salary (Low to High)' :
+                                    sort == 'salary_desc' ? 'Salary (High to Low)' :
+                                    sort == 'created_at_new' ? 'Newest First' : 'Oldest First',
+                                    style: TextStyle(fontFamily: 'Poppins'),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (value) => setState(() => _sortBy = value),
+                              dropdownColor: Colors.white,
+                              isExpanded: true,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          ZoomIn(
+                            duration: Duration(milliseconds: 300),
+                            child: ElevatedButton(
+                              onPressed: () => setState(() => _showFilter = false),
+                              style: ButtonStyle(
+                                backgroundColor: WidgetStateProperty.all(Colors.grey),
+                                shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                                padding: WidgetStateProperty.all(EdgeInsets.symmetric(vertical: 16)),
+                                elevation: WidgetStateProperty.all(5),
+                              ),
+                              child: Text(
+                                'Close',
+                                style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                          ZoomIn(
+                            duration: Duration(milliseconds: 300),
+                            child: ElevatedButton(
+                              onPressed: _applyFilters,
+                              style: ButtonStyle(
+                                backgroundColor: WidgetStateProperty.all(Colors.purpleAccent),
+                                shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                                padding: WidgetStateProperty.all(EdgeInsets.symmetric(vertical: 16)),
+                                elevation: WidgetStateProperty.all(5),
+                                shadowColor: WidgetStateProperty.all(Colors.purpleAccent.withAlpha(128)),
+                              ),
+                              child: Text(
+                                'Apply Filters',
+                                style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -201,268 +511,15 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
             children: [
               Column(
                 children: [
-                  // Filter Section
+                  // Floating Filter Button
                   Padding(
                     padding: EdgeInsets.all(16.0),
-                    child: Card(
-                      elevation: 8,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                        side: BorderSide(color: Colors.teal.withOpacity(0.3), width: 1),
-                      ),
-                      color: Colors.white.withOpacity(0.95),
-                      child: Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            FadeInDown(
-                              duration: Duration(milliseconds: 800),
-                              child: Text(
-                                'Filter Jobs',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blueGrey[700],
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
-                            ),
-                            SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    value: _selectedLocation,
-                                    decoration: InputDecoration(
-                                      labelText: 'Location',
-                                      labelStyle: TextStyle(color: Colors.blueGrey[700]),
-                                      filled: true,
-                                      fillColor: Colors.white.withOpacity(0.9),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      prefixIcon: Icon(FontAwesomeIcons.mapMarkerAlt, color: Colors.teal),
-                                    ),
-                                    items: _locations.map((location) {
-                                      return DropdownMenuItem<String>(
-                                        value: location,
-                                        child: Text(location, style: TextStyle(fontFamily: 'Poppins')),
-                                      );
-                                    }).toList(),
-                                    onChanged: (value) => setState(() => _selectedLocation = value),
-                                    dropdownColor: Colors.white,
-                                    isExpanded: true,
-                                  ),
-                                ),
-                                SizedBox(width: 10),
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    value: _selectedJobType,
-                                    decoration: InputDecoration(
-                                      labelText: 'Job Type',
-                                      labelStyle: TextStyle(color: Colors.blueGrey[700]),
-                                      filled: true,
-                                      fillColor: Colors.white.withOpacity(0.9),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      prefixIcon: Icon(FontAwesomeIcons.clock, color: Colors.teal),
-                                    ),
-                                    items: _jobTypes.map((type) {
-                                      return DropdownMenuItem<String>(
-                                        value: type,
-                                        child: Text(type, style: TextStyle(fontFamily: 'Poppins')),
-                                      );
-                                    }).toList(),
-                                    onChanged: (value) => setState(() => _selectedJobType = value),
-                                    dropdownColor: Colors.white,
-                                    isExpanded: true,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    value: _selectedJobCategory,
-                                    decoration: InputDecoration(
-                                      labelText: 'Job Category',
-                                      labelStyle: TextStyle(color: Colors.blueGrey[700]),
-                                      filled: true,
-                                      fillColor: Colors.white.withOpacity(0.9),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      prefixIcon: Icon(FontAwesomeIcons.tag, color: Colors.teal),
-                                    ),
-                                    items: _jobCategories.map((category) {
-                                      return DropdownMenuItem<String>(
-                                        value: category,
-                                        child: Text(category, style: TextStyle(fontFamily: 'Poppins')),
-                                      );
-                                    }).toList(),
-                                    onChanged: (value) => setState(() => _selectedJobCategory = value),
-                                    dropdownColor: Colors.white,
-                                    isExpanded: true,
-                                  ),
-                                ),
-                                SizedBox(width: 10),
-                                Expanded(
-                                  child: TextField(
-                                    decoration: InputDecoration(
-                                      labelText: 'Search (Title/Skills)',
-                                      labelStyle: TextStyle(color: Colors.blueGrey[700]),
-                                      filled: true,
-                                      fillColor: Colors.white.withOpacity(0.9),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      prefixIcon: Icon(FontAwesomeIcons.search, color: Colors.teal),
-                                    ),
-                                    style: TextStyle(fontFamily: 'Poppins'),
-                                    onChanged: (value) => setState(() => _searchQuery = value),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    decoration: InputDecoration(
-                                      labelText: 'Min Salary (BDT)',
-                                      labelStyle: TextStyle(color: Colors.blueGrey[700]),
-                                      filled: true,
-                                      fillColor: Colors.white.withOpacity(0.9),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      prefixIcon: Icon(FontAwesomeIcons.moneyBillWave, color: Colors.teal),
-                                    ),
-                                    keyboardType: TextInputType.number,
-                                    style: TextStyle(fontFamily: 'Poppins'),
-                                    onChanged: (value) => setState(() => _minSalary = value),
-                                  ),
-                                ),
-                                SizedBox(width: 10),
-                                Expanded(
-                                  child: TextField(
-                                    decoration: InputDecoration(
-                                      labelText: 'Max Salary (BDT)',
-                                      labelStyle: TextStyle(color: Colors.blueGrey[700]),
-                                      filled: true,
-                                      fillColor: Colors.white.withOpacity(0.9),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      prefixIcon: Icon(FontAwesomeIcons.moneyBillWave, color: Colors.teal),
-                                    ),
-                                    keyboardType: TextInputType.number,
-                                    style: TextStyle(fontFamily: 'Poppins'),
-                                    onChanged: (value) => setState(() => _maxSalary = value),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () async {
-                                      final range = await showDateRangePicker(
-                                        context: context,
-                                        firstDate: DateTime(2025, 1, 1),
-                                        lastDate: DateTime(2025, 12, 31),
-                                        initialDateRange: _selectedDateRange,
-                                        builder: (context, child) => Theme(
-                                          data: ThemeData.light().copyWith(
-                                            colorScheme: ColorScheme.light(
-                                              primary: Colors.teal,
-                                              onPrimary: Colors.white,
-                                              surface: Colors.white,
-                                              onSurface: Colors.blueGrey[700]!,
-                                            ),
-                                          ),
-                                          child: child!,
-                                        ),
-                                      );
-                                      if (range != null) setState(() => _selectedDateRange = range);
-                                    },
-                                    style: ButtonStyle(
-                                      backgroundColor: WidgetStateProperty.all(Colors.teal),
-                                      shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-                                      padding: WidgetStateProperty.all(EdgeInsets.symmetric(vertical: 16)),
-                                    ),
-                                    child: Text(
-                                      _selectedDateRange == null ? 'Select Date Range' : 'Date Range Set',
-                                      style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: 10),
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    value: _sortBy,
-                                    decoration: InputDecoration(
-                                      labelText: 'Sort By',
-                                      labelStyle: TextStyle(color: Colors.blueGrey[700]),
-                                      filled: true,
-                                      fillColor: Colors.white.withOpacity(0.9),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(15),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      prefixIcon: Icon(FontAwesomeIcons.sort, color: Colors.teal),
-                                    ),
-                                    items: _sortOptions.map((sort) {
-                                      return DropdownMenuItem<String>(
-                                        value: sort,
-                                        child: Text(
-                                          sort == 'salary_asc' ? 'Salary (Low to High)' :
-                                          sort == 'salary_desc' ? 'Salary (High to Low)' :
-                                          sort == 'created_at_new' ? 'Newest First' : 'Oldest First',
-                                          style: TextStyle(fontFamily: 'Poppins'),
-                                        ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (value) => setState(() => _sortBy = value),
-                                    dropdownColor: Colors.white,
-                                    isExpanded: true,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                            ZoomIn(
-                              duration: Duration(milliseconds: 300),
-                              child: ElevatedButton(
-                                onPressed: _applyFilters,
-                                style: ButtonStyle(
-                                  backgroundColor: WidgetStateProperty.all(Colors.purpleAccent),
-                                  shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-                                  padding: WidgetStateProperty.all(EdgeInsets.symmetric(vertical: 16)),
-                                  elevation: WidgetStateProperty.all(5),
-                                  shadowColor: WidgetStateProperty.all(Colors.purpleAccent.withAlpha(128)),
-                                ),
-                                child: Text(
-                                  'Apply Filters',
-                                  style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                    child: Align(
+                      alignment: Alignment.topRight,
+                      child: FloatingActionButton(
+                        onPressed: () => setState(() => _showFilter = true),
+                        backgroundColor: Colors.teal,
+                        child: Icon(FontAwesomeIcons.filter, color: Colors.white),
                       ),
                     ),
                   ),
@@ -612,6 +669,7 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
                 navigateToScreen: _navigateToScreen,
                 logout: _logout,
               ),
+              _buildFilterDialog(),
             ],
           ),
         ),

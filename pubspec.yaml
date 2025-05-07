@@ -8,6 +8,7 @@ environment:
   sdk: ^3.7.2
 
 dependencies:
+  fl_chart: ^0.68.0
   flutter_animate: ^4.1.1+1
   font_awesome_flutter: ^10.5.0
   cached_network_image: ^3.3.1
