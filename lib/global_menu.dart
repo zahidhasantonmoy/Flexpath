@@ -152,7 +152,7 @@ class GlobalMenu extends StatelessWidget {
                           size: 24,
                         ).animate().fadeIn(delay: const Duration(milliseconds: 700)).slideX(),
                         title: Text(
-                          userType == 'Employer' ? 'Employer Dashboard' : 'Worker Dashboard',
+                          userType == 'Employer' ? 'Employer Dashboard' : userType == 'Admin' ? 'Admin Dashboard' : 'Worker Dashboard',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -227,10 +227,51 @@ class GlobalMenu extends StatelessWidget {
                       ).animate().fadeIn(delay: const Duration(milliseconds: 1400)).slideY(),
                       ListTile(
                         leading: const FaIcon(
+                          FontAwesomeIcons.idCard,
+                          color: Colors.teal,
+                          size: 24,
+                        ).animate().fadeIn(delay: const Duration(milliseconds: 1500)).slideX(),
+                        title: const Text(
+                          'NID Verification',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          navigateToScreen('/nidVerification');
+                        },
+                      ).animate().fadeIn(delay: const Duration(milliseconds: 1600)).slideY(),
+                      if (userType == 'Admin')
+                        ListTile(
+                          leading: const FaIcon(
+                            FontAwesomeIcons.userCheck,
+                            color: Colors.teal,
+                            size: 24,
+                          ).animate().fadeIn(delay: const Duration(milliseconds: 1700)).slideX(),
+                          title: const Text(
+                            'Review NID Verifications',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                          onTap: () {
+                            Navigator.pop(context);
+                            navigateToScreen('/adminNidReview');
+                          },
+                        ).animate().fadeIn(delay: const Duration(milliseconds: 1800)).slideY(),
+                      ListTile(
+                        leading: const FaIcon(
                           FontAwesomeIcons.signOutAlt,
                           color: Colors.redAccent,
                           size: 24,
-                        ).animate().fadeIn(delay: const Duration(milliseconds: 1500)).slideX(),
+                        ).animate().fadeIn(delay: const Duration(milliseconds: 1900)).slideX(),
                         title: const Text(
                           'Logout',
                           style: TextStyle(
@@ -244,7 +285,7 @@ class GlobalMenu extends StatelessWidget {
                           Navigator.pop(context);
                           logout();
                         },
-                      ).animate().fadeIn(delay: const Duration(milliseconds: 1600)).slideY(),
+                      ).animate().fadeIn(delay: const Duration(milliseconds: 2000)).slideY(),
                       const SizedBox(height: 16),
                     ],
                   ),

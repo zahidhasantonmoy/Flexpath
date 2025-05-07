@@ -12,12 +12,16 @@ import 'view_profile_screen.dart';
 import 'rating_feedback_screen.dart';
 import 'payment_screen.dart';
 import 'dashboard_screen.dart';
+import 'nid_verification_screen.dart';
+import 'admin_nid_review_screen.dart';
+import 'global_scaffold.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
     url: 'https://epxapxmlwweiydgitpnq.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVweGFweG1sd3dlaXlkZ2l0cG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzNzE4MjYsImV4cCI6MjA2MTk0NzgyNn0.n67p6qBtxDauTy0rD-9P0rUWhs0Z7FCtWhCz3c7ycWs',
+    anonKey:
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVweGFweG1sd3dlaXlkZ2l0cG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzNzE4MjYsImV4cCI6MjA2MTk0NzgyNn0.n67p6qBtxDauTy0rD-9P0rUWhs0Z7FCtWhCz3c7ycWs',
   );
 
   runApp(const FlexPathApp());
@@ -26,8 +30,25 @@ void main() async {
 class FlexPathApp extends StatelessWidget {
   const FlexPathApp({super.key});
 
+  static void navigateToScreen(BuildContext context, String route) {
+    final isAuthenticated = Supabase.instance.client.auth.currentUser != null;
+    final restrictedRoutes = ['/homepage', '/signIn', '/signUp'];
+
+    if (isAuthenticated && restrictedRoutes.contains(route)) {
+      return;
+    }
+
+    Navigator.pushNamed(context, route);
+  }
+
+  static Future<void> logout(BuildContext context) async {
+    await Supabase.instance.client.auth.signOut();
+    Navigator.pushNamedAndRemoveUntil(context, '/homepage', (route) => false);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isAuthenticated = Supabase.instance.client.auth.currentUser != null;
     return MaterialApp(
       title: 'FlexPath',
       theme: ThemeData(
@@ -55,22 +76,54 @@ class FlexPathApp extends StatelessWidget {
         ),
       ),
       debugShowCheckedModeBanner: false,
-      home: HomepageScreen(),
+      initialRoute: isAuthenticated ? '/dashboard' : '/homepage',
       routes: {
-        '/homepage': (context) => HomepageScreen(),
-        '/signIn': (context) => SignInScreen(),
-        '/signUp': (context) => SignUpScreen(),
-        '/jobFeed': (context) => JobFeedScreen(),
-        '/reset-password': (context) => ResetPasswordScreen(),
-        '/jobPost': (context) => JobPostScreen(),
-        '/profile': (context) => ProfileScreen(),
-        '/search': (context) => SearchScreen(),
-        '/ratingFeedback': (context) => RatingFeedbackScreen(),
-        '/payment': (context) => PaymentScreen(),
-        '/dashboard': (context) => DashboardScreen(),
+        '/homepage': (context) => const HomepageScreen(),
+        '/signIn': (context) => const SignInScreen(),
+        '/signUp': (context) => const SignUpScreen(),
+        '/jobFeed': (context) => GlobalScaffold(
+          route: '/jobFeed',
+          child: const JobFeedScreen(),
+        ),
+        '/reset-password': (context) => const ResetPasswordScreen(),
+        '/jobPost': (context) => GlobalScaffold(
+          route: '/jobPost',
+          child: const JobPostScreen(),
+        ),
+        '/profile': (context) => GlobalScaffold(
+          route: '/profile',
+          child: const ProfileScreen(),
+        ),
+        '/search': (context) => GlobalScaffold(
+          route: '/search',
+          child: const SearchScreen(),
+        ),
+        '/ratingFeedback': (context) => GlobalScaffold(
+          route: '/ratingFeedback',
+          child: const RatingFeedbackScreen(),
+        ),
+        '/payment': (context) => GlobalScaffold(
+          route: '/payment',
+          child: const PaymentScreen(),
+        ),
+        '/dashboard': (context) => GlobalScaffold(
+          route: '/dashboard',
+          child: const DashboardScreen(),
+        ),
+        '/nidVerification': (context) => GlobalScaffold(
+          route: '/nidVerification',
+          child: const NidVerificationScreen(),
+        ),
+        '/adminNidReview': (context) => GlobalScaffold(
+          route: '/adminNidReview',
+          child: const AdminNidReviewScreen(),
+        ),
         '/viewProfile': (context) {
           final args = ModalRoute.of(context)!.settings.arguments as String;
-          return ViewProfileScreen(userId: args);
+          return GlobalScaffold(
+            route: '/viewProfile',
+            child: ViewProfileScreen(userId: args),
+          );
         },
       },
     );

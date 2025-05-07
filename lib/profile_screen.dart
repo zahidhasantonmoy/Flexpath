@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'global_menu.dart';
+import 'sidebar_menu.dart';
+import 'main.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -147,11 +149,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             .uploadBinary(
           '${userId}/profile.jpg',
           bytes,
-           // Specify content type directly
         );
 
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Profile photo updated!')));
-        _fetchUserData(); // Refresh to update UI, though image might need manual refresh
+        _fetchUserData();
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update photo: $e')));
       }
@@ -159,12 +160,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _logout() async {
-    await supabase.auth.signOut();
-    Navigator.pushNamedAndRemoveUntil(context, '/homepage', (route) => false);
+    await FlexPathApp.logout(context);
   }
 
   void _navigateToScreen(String route) {
-    Navigator.pushNamed(context, route);
+    FlexPathApp.navigateToScreen(context, route);
   }
 
   void _toggleTheme() {
@@ -197,12 +197,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: SidebarMenu(
+        navigateToScreen: _navigateToScreen,
+        logout: _logout,
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: _isDarkMode
                 ? [const Color(0xFF0F3460), const Color(0xFF16213E)]
-                : [Colors.blue.shade100, Colors.white],
+                : [Colors.teal.shade100, Colors.purple.shade100],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             stops: [0.0, 0.8],
@@ -219,7 +223,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Profile Header with Photo
                     FadeInUp(
                       duration: Duration(milliseconds: 800),
                       child: Stack(
@@ -283,330 +286,396 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     SizedBox(height: 20),
-                    // Profile Details Card
-                    SlideInUp(
-                      duration: Duration(milliseconds: 800),
-                      child: Card(
-                        elevation: 8,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          side: BorderSide(color: Colors.teal.withOpacity(0.5), width: 1),
-                        ),
-                        color: _isDarkMode ? Colors.black26 : Colors.white.withOpacity(0.9),
-                        child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _isBengali ? _translateToBengali('Edit Profile') : 'Edit Profile',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.teal,
-                                  fontFamily: 'Poppins',
-                                ),
-                              ),
-                              SizedBox(height: 15),
-                              _buildEditableField(
-                                label: _isBengali ? _translateToBengali('Full Name') : 'Full Name',
-                                icon: Icons.person,
-                                controller: _fullNameController,
-                                enabled: _isEditing,
-                              ),
-                              _buildEditableField(
-                                label: _isBengali ? _translateToBengali('Mobile Number') : 'Mobile Number',
-                                icon: Icons.phone,
-                                controller: _mobileController,
-                                enabled: _isEditing,
-                              ),
-                              _buildEditableField(
-                                label: _isBengali ? _translateToBengali('District/Upazila') : 'District/Upazila',
-                                icon: Icons.location_on,
-                                controller: _districtController,
-                                enabled: _isEditing,
-                              ),
-                              _buildEditableField(
-                                label: _isBengali ? _translateToBengali('Skills') : 'Skills',
-                                icon: Icons.work,
-                                controller: _skillsController,
-                                enabled: _isEditing,
-                              ),
-                              _buildEditableField(
-                                label: _isBengali ? _translateToBengali('Password') : 'Password',
-                                icon: Icons.lock,
-                                controller: _passwordController,
-                                enabled: _isEditing,
-                                obscureText: true,
-                              ),
-                              SizedBox(height: 15),
-                              ZoomIn(
-                                duration: Duration(milliseconds: 300),
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    if (_isEditing) {
-                                      _updateProfile();
-                                    } else {
-                                      setState(() => _isEditing = true);
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.teal,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  ),
-                                  child: Text(
-                                    _isEditing
-                                        ? (_isBengali ? _translateToBengali('Save') : 'Save')
-                                        : (_isBengali ? _translateToBengali('Edit Profile') : 'Edit Profile'),
-                                    style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 20),
-                    // Applied Jobs Section
                     FadeInUp(
                       duration: Duration(milliseconds: 800),
                       delay: Duration(milliseconds: 200),
-                      child: Card(
-                        elevation: 8,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          side: BorderSide(color: Colors.green.withOpacity(0.5), width: 1),
+                      child: Text(
+                        _isBengali ? _translateToBengali('Full Name') : 'Full Name',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: _isDarkMode ? Colors.white : Colors.blueGrey[700],
+                          fontFamily: 'Poppins',
                         ),
-                        color: _isDarkMode ? Colors.black26 : Colors.white.withOpacity(0.9),
-                        child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    _isBengali ? _translateToBengali('Applied Jobs') : 'Applied Jobs',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green,
-                                      fontFamily: 'Poppins',
-                                    ),
-                                  ),
-                                  Icon(Icons.work, color: Colors.green),
-                                ],
-                              ),
-                              SizedBox(height: 8),
-                              appliedJobs.isEmpty
-                                  ? Text(
-                                _isBengali ? _translateToBengali('No applied jobs') : 'No applied jobs',
-                                style: TextStyle(color: Colors.white70, fontFamily: 'Poppins'),
-                              )
-                                  : ListView.builder(
-                                shrinkWrap: true,
-                                physics: NeverScrollableScrollPhysics(),
-                                itemCount: appliedJobs.length,
-                                itemBuilder: (context, index) {
-                                  final job = appliedJobs[index];
-                                  return ListTile(
-                                    leading: Icon(Icons.check_circle, color: Colors.green),
-                                    title: Text(
-                                      job['title'] ?? 'No Title',
-                                      style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
-                                    ),
-                                    subtitle: Text(
-                                      'Pay: ${job['pay'] ?? 'N/A'} BDT | Status: ${job['status'] ?? 'N/A'}',
-                                      style: TextStyle(color: Colors.white70, fontFamily: 'Poppins'),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
+                      ),
+                    ),
+                    FadeInUp(
+                      duration: Duration(milliseconds: 800),
+                      delay: Duration(milliseconds: 300),
+                      child: TextField(
+                        controller: _fullNameController,
+                        enabled: _isEditing,
+                        style: TextStyle(color: _isDarkMode ? Colors.white : Colors.blueGrey[800]),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: _isDarkMode ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.9),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: BorderSide(color: Colors.teal, width: 2),
                           ),
                         ),
                       ),
                     ),
-                    SizedBox(height: 20),
-                    // Saved Jobs Section
+                    SizedBox(height: 16),
                     FadeInUp(
                       duration: Duration(milliseconds: 800),
                       delay: Duration(milliseconds: 400),
-                      child: Card(
-                        elevation: 8,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          side: BorderSide(color: Colors.teal.withOpacity(0.5), width: 1),
+                      child: Text(
+                        _isBengali ? _translateToBengali('Mobile Number') : 'Mobile Number',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: _isDarkMode ? Colors.white : Colors.blueGrey[700],
+                          fontFamily: 'Poppins',
                         ),
-                        color: _isDarkMode ? Colors.black26 : Colors.white.withOpacity(0.9),
-                        child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    _isBengali ? _translateToBengali('Saved Jobs') : 'Saved Jobs',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.teal,
-                                      fontFamily: 'Poppins',
-                                    ),
-                                  ),
-                                  Icon(Icons.bookmark, color: Colors.teal),
-                                ],
-                              ),
-                              SizedBox(height: 8),
-                              savedJobs.isEmpty
-                                  ? Text(
-                                _isBengali ? _translateToBengali('No saved jobs') : 'No saved jobs',
-                                style: TextStyle(color: Colors.white70, fontFamily: 'Poppins'),
-                              )
-                                  : ListView.builder(
-                                shrinkWrap: true,
-                                physics: NeverScrollableScrollPhysics(),
-                                itemCount: savedJobs.length,
-                                itemBuilder: (context, index) {
-                                  final job = savedJobs[index];
-                                  return ListTile(
-                                    leading: Icon(Icons.bookmark_border, color: Colors.teal),
-                                    title: Text(
-                                      job['title'] ?? 'No Title',
-                                      style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
-                                    ),
-                                    subtitle: Text(
-                                      'Pay: ${job['pay'] ?? 'N/A'} BDT',
-                                      style: TextStyle(color: Colors.white70, fontFamily: 'Poppins'),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
+                      ),
+                    ),
+                    FadeInUp(
+                      duration: Duration(milliseconds: 800),
+                      delay: Duration(milliseconds: 500),
+                      child: TextField(
+                        controller: _mobileController,
+                        enabled: _isEditing,
+                        style: TextStyle(color: _isDarkMode ? Colors.white : Colors.blueGrey[800]),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: _isDarkMode ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.9),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: BorderSide(color: Colors.teal, width: 2),
                           ),
                         ),
                       ),
                     ),
-                    SizedBox(height: 20),
-                    // Notification Settings
+                    SizedBox(height: 16),
                     FadeInUp(
                       duration: Duration(milliseconds: 800),
                       delay: Duration(milliseconds: 600),
-                      child: Card(
-                        elevation: 8,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          side: BorderSide(color: Colors.blue.withOpacity(0.5), width: 1),
+                      child: Text(
+                        _isBengali ? _translateToBengali('District/Upazila') : 'District/Upazila',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: _isDarkMode ? Colors.white : Colors.blueGrey[700],
+                          fontFamily: 'Poppins',
                         ),
-                        color: _isDarkMode ? Colors.black26 : Colors.white.withOpacity(0.9),
-                        child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(Icons.notifications, color: Colors.blue),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    _isBengali ? _translateToBengali('Notifications') : 'Notifications',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      color: Colors.blue,
-                                      fontFamily: 'Poppins',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Switch(
-                                value: _notificationsEnabled,
-                                onChanged: (value) => _toggleNotifications(),
-                                activeColor: Colors.blue,
-                                inactiveThumbColor: Colors.grey,
-                              ),
-                            ],
+                      ),
+                    ),
+                    FadeInUp(
+                      duration: Duration(milliseconds: 800),
+                      delay: Duration(milliseconds: 700),
+                      child: TextField(
+                        controller: _districtController,
+                        enabled: _isEditing,
+                        style: TextStyle(color: _isDarkMode ? Colors.white : Colors.blueGrey[800]),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: _isDarkMode ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.9),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: BorderSide(color: Colors.teal, width: 2),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    FadeInUp(
+                      duration: Duration(milliseconds: 800),
+                      delay: Duration(milliseconds: 800),
+                      child: Text(
+                        _isBengali ? _translateToBengali('Skills') : 'Skills',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: _isDarkMode ? Colors.white : Colors.blueGrey[700],
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ),
+                    FadeInUp(
+                      duration: Duration(milliseconds: 800),
+                      delay: Duration(milliseconds: 900),
+                      child: TextField(
+                        controller: _skillsController,
+                        enabled: _isEditing,
+                        style: TextStyle(color: _isDarkMode ? Colors.white : Colors.blueGrey[800]),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: _isDarkMode ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.9),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: BorderSide(color: Colors.teal, width: 2),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (_isEditing) ...[
+                      SizedBox(height: 16),
+                      FadeInUp(
+                        duration: Duration(milliseconds: 800),
+                        delay: Duration(milliseconds: 1000),
+                        child: Text(
+                          _isBengali ? _translateToBengali('Password') : 'Password',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: _isDarkMode ? Colors.white : Colors.blueGrey[700],
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
+                      ),
+                      FadeInUp(
+                        duration: Duration(milliseconds: 800),
+                        delay: Duration(milliseconds: 1100),
+                        child: TextField(
+                          controller: _passwordController,
+                          obscureText: true,
+                          style: TextStyle(color: _isDarkMode ? Colors.white : Colors.blueGrey[800]),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: _isDarkMode ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.9),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(15),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(15),
+                              borderSide: BorderSide(color: Colors.teal, width: 2),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    SizedBox(height: 20),
+                    FadeInUp(
+                      duration: Duration(milliseconds: 800),
+                      delay: Duration(milliseconds: 1200),
+                      child: ZoomIn(
+                        duration: Duration(milliseconds: 300),
+                        child: ElevatedButton(
+                          onPressed: _isEditing ? _updateProfile : () => setState(() => _isEditing = true),
+                          style: ButtonStyle(
+                            backgroundColor: WidgetStateProperty.all(Colors.teal),
+                            padding: WidgetStateProperty.all(
+                                EdgeInsets.symmetric(horizontal: 40, vertical: 16)),
+                            shape: WidgetStateProperty.all(
+                                RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                            elevation: WidgetStateProperty.all(5),
+                            shadowColor: WidgetStateProperty.all(Colors.teal.withAlpha(128)),
+                          ),
+                          child: Text(
+                            _isEditing
+                                ? (_isBengali ? _translateToBengali('Save') : 'Save')
+                                : (_isBengali ? _translateToBengali('Edit Profile') : 'Edit Profile'),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontFamily: 'Poppins',
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
                     ),
                     SizedBox(height: 20),
+                    FadeInUp(
+                      duration: Duration(milliseconds: 800),
+                      delay: Duration(milliseconds: 1300),
+                      child: Text(
+                        _isBengali ? _translateToBengali('Saved Jobs') : 'Saved Jobs',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: _isDarkMode ? Colors.white : Colors.blueGrey[700],
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    savedJobs.isEmpty
+                        ? FadeInUp(
+                      duration: Duration(milliseconds: 800),
+                      delay: Duration(milliseconds: 1400),
+                      child: Text(
+                        _isBengali ? _translateToBengali('No saved jobs') : 'No saved jobs',
+                        style: TextStyle(
+                          color: _isDarkMode ? Colors.white70 : Colors.blueGrey[600],
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    )
+                        : FadeInUp(
+                      duration: Duration(milliseconds: 800),
+                      delay: Duration(milliseconds: 1400),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: savedJobs.length,
+                        itemBuilder: (context, index) {
+                          final job = savedJobs[index];
+                          return Card(
+                            color: _isDarkMode ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.9),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                            margin: EdgeInsets.symmetric(vertical: 8),
+                            child: ListTile(
+                              title: Text(
+                                job['title'] ?? 'No Title',
+                                style: TextStyle(
+                                  color: _isDarkMode ? Colors.white : Colors.blueGrey[800],
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                              subtitle: Text(
+                                'Pay: ${job['pay']?.toStringAsFixed(2) ?? 'N/A'}',
+                                style: TextStyle(
+                                  color: _isDarkMode ? Colors.white70 : Colors.blueGrey[600],
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    FadeInUp(
+                      duration: Duration(milliseconds: 800),
+                      delay: Duration(milliseconds: 1500),
+                      child: Text(
+                        _isBengali ? _translateToBengali('Applied Jobs') : 'Applied Jobs',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: _isDarkMode ? Colors.white : Colors.blueGrey[700],
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    appliedJobs.isEmpty
+                        ? FadeInUp(
+                      duration: Duration(milliseconds: 800),
+                      delay: Duration(milliseconds: 1600),
+                      child: Text(
+                        _isBengali ? _translateToBengali('No applied jobs') : 'No applied jobs',
+                        style: TextStyle(
+                          color: _isDarkMode ? Colors.white70 : Colors.blueGrey[600],
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    )
+                        : FadeInUp(
+                      duration: Duration(milliseconds: 800),
+                      delay: Duration(milliseconds: 1600),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        itemCount: appliedJobs.length,
+                        itemBuilder: (context, index) {
+                          final job = appliedJobs[index];
+                          return Card(
+                            color: _isDarkMode ? Colors.white.withOpacity(0.1) : Colors.white.withOpacity(0.9),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                            margin: EdgeInsets.symmetric(vertical: 8),
+                            child: ListTile(
+                              title: Text(
+                                job['title'] ?? 'No Title',
+                                style: TextStyle(
+                                  color: _isDarkMode ? Colors.white : Colors.blueGrey[800],
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                              subtitle: Text(
+                                'Pay: ${job['pay']?.toStringAsFixed(2) ?? 'N/A'}\nStatus: ${job['status']}',
+                                style: TextStyle(
+                                  color: _isDarkMode ? Colors.white70 : Colors.blueGrey[600],
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    FadeInUp(
+                      duration: Duration(milliseconds: 800),
+                      delay: Duration(milliseconds: 1700),
+                      child: SwitchListTile(
+                        title: Text(
+                          _isBengali ? 'বাংলা' : 'Bengali',
+                          style: TextStyle(
+                            color: _isDarkMode ? Colors.white : Colors.blueGrey[700],
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
+                        value: _isBengali,
+                        onChanged: (value) => setState(() => _isBengali = value),
+                        activeColor: Colors.teal,
+                      ),
+                    ),
+                    FadeInUp(
+                      duration: Duration(milliseconds: 800),
+                      delay: Duration(milliseconds: 1800),
+                      child: SwitchListTile(
+                        title: Text(
+                          'Dark Mode',
+                          style: TextStyle(
+                            color: _isDarkMode ? Colors.white : Colors.blueGrey[700],
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
+                        value: _isDarkMode,
+                        onChanged: (value) => _toggleTheme(),
+                        activeColor: Colors.teal,
+                      ),
+                    ),
+                    FadeInUp(
+                      duration: Duration(milliseconds: 800),
+                      delay: Duration(milliseconds: 1900),
+                      child: SwitchListTile(
+                        title: Text(
+                          _isBengali
+                              ? _translateToBengali('Enable Notifications')
+                              : 'Enable Notifications',
+                          style: TextStyle(
+                            color: _isDarkMode ? Colors.white : Colors.blueGrey[700],
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
+                        value: _notificationsEnabled,
+                        onChanged: (value) => _toggleNotifications(),
+                        activeColor: Colors.teal,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              // Global Menu
               GlobalMenu(
                 navigateToScreen: _navigateToScreen,
                 logout: _logout,
               ),
-              // Theme and Language Toggle
-              Positioned(
-                top: 16,
-                right: 16,
-                child: Row(
-                  children: [
-                    ZoomIn(
-                      duration: Duration(milliseconds: 300),
-                      child: IconButton(
-                        icon: Icon(_isBengali ? Icons.language : Icons.translate,
-                            color: _isDarkMode ? Colors.white : Colors.blueAccent),
-                        onPressed: () => setState(() => _isBengali = !_isBengali),
-                        tooltip: 'Toggle Language',
-                      ),
-                    ),
-                    ZoomIn(
-                      duration: Duration(milliseconds: 300),
-                      delay: Duration(milliseconds: 100),
-                      child: IconButton(
-                        icon: Icon(_isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                            color: _isDarkMode ? Colors.white : Colors.blueAccent),
-                        onPressed: _toggleTheme,
-                        tooltip: 'Toggle Theme',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildEditableField({
-    required String label,
-    required IconData icon,
-    required TextEditingController controller,
-    bool enabled = false,
-    bool obscureText = false,
-  }) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.teal, size: 20),
-          SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              enabled: enabled,
-              obscureText: obscureText,
-              decoration: InputDecoration(
-                labelText: label,
-                labelStyle: TextStyle(color: Colors.white70, fontFamily: 'Poppins'),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.teal),
-                ),
-              ),
-              style: TextStyle(color: enabled ? Colors.white : Colors.green, fontFamily: 'Poppins'),
-            ),
-          ),
-        ],
       ),
     );
   }

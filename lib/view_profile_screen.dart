@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'sidebar_menu.dart';
 
 class ViewProfileScreen extends StatefulWidget {
   final String userId;
@@ -27,7 +28,6 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
   Future<void> _fetchUserData() async {
     try {
       final response = await supabase.from('users').select().eq('id', widget.userId).single();
-      print('Fetched user data: $response'); // Debug log to verify fields
       if (mounted) {
         setState(() {
           userData = response;
@@ -35,7 +35,6 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
         });
       }
     } catch (e) {
-      print('Error fetching user data: $e'); // Debug log for errors
       if (mounted) {
         setState(() {
           _errorMessage = 'Failed to load profile: $e';
@@ -43,6 +42,15 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
         });
       }
     }
+  }
+
+  void _navigateToScreen(String route) {
+    Navigator.pushNamed(context, route);
+  }
+
+  Future<void> _logout() async {
+    await supabase.auth.signOut();
+    Navigator.pushNamedAndRemoveUntil(context, '/homepage', (route) => false);
   }
 
   void _showErrorDialog(String message) {
@@ -72,6 +80,10 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: SidebarMenu(
+        navigateToScreen: _navigateToScreen,
+        logout: _logout,
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(

@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'global_menu.dart';
+import 'sidebar_menu.dart';
+import 'main.dart';
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
@@ -35,7 +37,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
       if (user == null) throw Exception('User not authenticated');
       _userId = user.id;
 
-      // Fetch user type and full name
       final userDataResponse = await supabase
           .from('users')
           .select('user_type, full_name')
@@ -49,7 +50,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
       _userType = userDataResponse['user_type'];
       _userFullName = userDataResponse['full_name'] ?? 'User';
 
-      // Fetch jobs with payment details
       if (_userType == 'Employer') {
         final jobs = await supabase
             .from('job_applications')
@@ -84,7 +84,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     setState(() => _isLoading = true);
     try {
-      // Update payment status to completed
       await supabase
           .from('job_applications')
           .update({'payment_status': 'completed'})
@@ -94,7 +93,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Payment processed successfully!')),
       );
-      // Refresh job list
       await _fetchUserDataAndJobs();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -106,12 +104,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   void _navigateToScreen(String route) {
-    Navigator.pushNamed(context, route);
+    FlexPathApp.navigateToScreen(context, route);
   }
 
   Future<void> _logout() async {
-    await supabase.auth.signOut();
-    Navigator.pushNamedAndRemoveUntil(context, '/homepage', (route) => false);
+    await FlexPathApp.logout(context);
   }
 
   Widget _buildDropdown({
@@ -252,6 +249,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: SidebarMenu(
+        navigateToScreen: _navigateToScreen,
+        logout: _logout,
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -350,7 +351,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           ),
                         ),
                         SizedBox(height: 20),
-                        // Display pending payments
                         if (_jobs.isNotEmpty)
                           ..._jobs
                               .where((job) =>

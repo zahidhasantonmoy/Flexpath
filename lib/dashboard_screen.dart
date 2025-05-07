@@ -4,6 +4,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'global_menu.dart';
+import 'sidebar_menu.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -33,7 +34,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (user == null) throw Exception('User not authenticated');
       _userId = user.id;
 
-      // Fetch user data
       final userDataResponse = await supabase
           .from('users')
           .select('user_type, full_name, job_completed, global_rating')
@@ -47,7 +47,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _userType = userDataResponse['user_type'];
       _userFullName = userDataResponse['full_name'] ?? 'User';
 
-      // Fetch analytics data
       if (_userType == 'Employer') {
         final jobsPosted = await supabase
             .from('jobs')
@@ -306,6 +305,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: SidebarMenu(
+        navigateToScreen: _navigateToScreen,
+        logout: _logout,
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(

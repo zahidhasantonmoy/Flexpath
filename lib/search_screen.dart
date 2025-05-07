@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'global_menu.dart';
+import 'sidebar_menu.dart';
+import 'main.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -59,6 +62,14 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
+  void _navigateToScreen(String route) {
+    FlexPathApp.navigateToScreen(context, route);
+  }
+
+  Future<void> _logout() async {
+    await FlexPathApp.logout(context);
+  }
+
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
@@ -86,10 +97,14 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: SidebarMenu(
+        navigateToScreen: _navigateToScreen,
+        logout: _logout,
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF0F3460), Color(0xFF1A1A2E)],
+            colors: [Colors.teal.shade100, Colors.purple.shade100],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -123,12 +138,12 @@ class _SearchScreenState extends State<SearchScreen> {
                         delay: Duration(milliseconds: 200),
                         child: TextField(
                           controller: nameController,
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(color: Colors.blueGrey[800]),
                           decoration: InputDecoration(
                             labelText: 'Name',
                             labelStyle: TextStyle(color: Colors.teal),
                             filled: true,
-                            fillColor: Colors.white.withOpacity(0.1),
+                            fillColor: Colors.white.withOpacity(0.9),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(15),
@@ -144,12 +159,12 @@ class _SearchScreenState extends State<SearchScreen> {
                         delay: Duration(milliseconds: 300),
                         child: TextField(
                           controller: districtController,
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(color: Colors.blueGrey[800]),
                           decoration: InputDecoration(
                             labelText: 'District',
                             labelStyle: TextStyle(color: Colors.teal),
                             filled: true,
-                            fillColor: Colors.white.withOpacity(0.1),
+                            fillColor: Colors.white.withOpacity(0.9),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(15),
@@ -165,12 +180,12 @@ class _SearchScreenState extends State<SearchScreen> {
                         delay: Duration(milliseconds: 400),
                         child: TextField(
                           controller: upazilaController,
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(color: Colors.blueGrey[800]),
                           decoration: InputDecoration(
                             labelText: 'Upazila',
                             labelStyle: TextStyle(color: Colors.teal),
                             filled: true,
-                            fillColor: Colors.white.withOpacity(0.1),
+                            fillColor: Colors.white.withOpacity(0.9),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(15),
@@ -186,12 +201,12 @@ class _SearchScreenState extends State<SearchScreen> {
                         delay: Duration(milliseconds: 500),
                         child: TextField(
                           controller: skillsController,
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(color: Colors.blueGrey[800]),
                           decoration: InputDecoration(
                             labelText: 'Skills (comma-separated)',
                             labelStyle: TextStyle(color: Colors.teal),
                             filled: true,
-                            fillColor: Colors.white.withOpacity(0.1),
+                            fillColor: Colors.white.withOpacity(0.9),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(15),
@@ -209,7 +224,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           value: userType,
                           hint: Text('Select User Type', style: TextStyle(color: Colors.teal)),
                           items: ['Job Seeker', 'Employer']
-                              .map((type) => DropdownMenuItem(value: type, child: Text(type, style: TextStyle(color: Colors.white))))
+                              .map((type) => DropdownMenuItem(value: type, child: Text(type, style: TextStyle(color: Colors.blueGrey[800]))))
                               .toList(),
                           onChanged: (value) {
                             setState(() => userType = value);
@@ -218,7 +233,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             labelText: 'User Type',
                             labelStyle: TextStyle(color: Colors.teal),
                             filled: true,
-                            fillColor: Colors.white.withOpacity(0.1),
+                            fillColor: Colors.white.withOpacity(0.9),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(15),
@@ -226,7 +241,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             ),
                             prefixIcon: FaIcon(FontAwesomeIcons.userTie, color: Colors.teal),
                           ),
-                          dropdownColor: Color(0xFF16213E),
+                          dropdownColor: Colors.white,
                         ),
                       ),
                       SizedBox(height: 20),
@@ -272,7 +287,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                 duration: Duration(milliseconds: 800),
                                 delay: Duration(milliseconds: 100 * index),
                                 child: Card(
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: Colors.white.withOpacity(0.9),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                                   margin: EdgeInsets.symmetric(vertical: 8),
                                   child: ListTile(
@@ -288,14 +303,14 @@ class _SearchScreenState extends State<SearchScreen> {
                                     title: Text(
                                       user['full_name'] ?? 'Unknown',
                                       style: TextStyle(
-                                        color: Colors.white,
+                                        color: Colors.blueGrey[800],
                                         fontWeight: FontWeight.bold,
                                         fontFamily: 'Poppins',
                                       ),
                                     ),
                                     subtitle: Text(
                                       '${user['user_type']} • ${user['district'] ?? ''}, ${user['upazila'] ?? ''}',
-                                      style: TextStyle(color: Colors.white70, fontFamily: 'Poppins'),
+                                      style: TextStyle(color: Colors.blueGrey[600], fontFamily: 'Poppins'),
                                     ),
                                     onTap: () {
                                       Navigator.pushNamed(
@@ -314,7 +329,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         Center(
                           child: Text(
                             'No results found',
-                            style: TextStyle(color: Colors.white70, fontFamily: 'Poppins'),
+                            style: TextStyle(color: Colors.blueGrey[600], fontFamily: 'Poppins'),
                           ),
                         ),
                     ],
@@ -331,6 +346,10 @@ class _SearchScreenState extends State<SearchScreen> {
                     onPressed: () => Navigator.pop(context),
                   ),
                 ),
+              ),
+              GlobalMenu(
+                navigateToScreen: _navigateToScreen,
+                logout: _logout,
               ),
             ],
           ),

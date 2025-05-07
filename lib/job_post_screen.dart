@@ -4,6 +4,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'global_menu.dart';
+import 'sidebar_menu.dart';
 
 class JobPostScreen extends StatefulWidget {
   const JobPostScreen({super.key});
@@ -17,7 +18,6 @@ class _JobPostScreenState extends State<JobPostScreen> {
   final PageController _pageController = PageController();
   bool _isLoading = false;
 
-  // Form controllers
   final TextEditingController _jobTitleController = TextEditingController();
   final TextEditingController _jobDescriptionController = TextEditingController();
   final TextEditingController _salaryController = TextEditingController();
@@ -25,7 +25,6 @@ class _JobPostScreenState extends State<JobPostScreen> {
   final TextEditingController _deadlineController = TextEditingController();
   final TextEditingController _requiredExperienceController = TextEditingController();
 
-  // Dropdown values
   String? _selectedJobCategory;
   String? _selectedJobType;
   String? _selectedExperienceLevel;
@@ -40,11 +39,9 @@ class _JobPostScreenState extends State<JobPostScreen> {
   String? _selectedWorkSchedule;
   String? _selectedLanguages;
 
-  // Switch values
   bool _jobScheduleFlexibility = false;
   bool _transportationTravelAssistance = false;
 
-  // Predefined dropdown options
   final List<String> _jobCategories = [
     'Tutoring', 'Delivery', 'Freelance', 'Customer Service',
     'Sales and Marketing', 'Data Entry', 'IT and Software',
@@ -368,6 +365,10 @@ class _JobPostScreenState extends State<JobPostScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: SidebarMenu(
+        navigateToScreen: _navigateToScreen,
+        logout: _logout,
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -385,7 +386,6 @@ class _JobPostScreenState extends State<JobPostScreen> {
                 controller: _pageController,
                 physics: NeverScrollableScrollPhysics(),
                 children: [
-                  // Required Fields Screen
                   SingleChildScrollView(
                     padding: EdgeInsets.all(16.0),
                     child: Column(
@@ -534,7 +534,6 @@ class _JobPostScreenState extends State<JobPostScreen> {
                       ],
                     ),
                   ),
-                  // Optional Fields Screen
                   SingleChildScrollView(
                     padding: EdgeInsets.all(16.0),
                     child: Column(

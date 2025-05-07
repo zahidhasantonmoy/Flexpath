@@ -22,6 +22,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   lottie: ^2.1.0
   flutter_social_button: 1.1.6+1
+  sidebar_with_animation: ^0.0.3
+
   # Add more dependencies here if needed, for example:
   # provider: ^6.0.1
 

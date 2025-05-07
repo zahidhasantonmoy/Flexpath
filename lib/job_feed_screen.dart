@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'global_menu.dart';
+import 'sidebar_menu.dart';
+import 'main.dart';
 
 class JobFeedScreen extends StatefulWidget {
   const JobFeedScreen({super.key});
@@ -30,7 +32,6 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
   final Map<String, List<Map<String, dynamic>>> _jobCache = {};
   bool _showFilter = false;
 
-  // Predefined filter options (aligned with JobPostScreen)
   final List<String> _locations = [
     'Dhaka', 'Chittagong', 'Khulna', 'Rajshahi', 'Sylhet', 'Barisal',
     'Rangpur', 'Mymensingh', 'Rural Areas'
@@ -83,7 +84,6 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
           .select('*, users!employer_id(full_name)')
           .eq('status', 'open');
 
-      // Apply filters
       if (_selectedLocation != null) query.eq('location', _selectedLocation!);
       if (_selectedJobType != null) query.eq('job_type', _selectedJobType!);
       if (_selectedJobCategory != null) query.eq('job_category', _selectedJobCategory!);
@@ -102,7 +102,6 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
         query.or('job_title.ilike.%$_searchQuery%,required_skills.ilike.%$_searchQuery%');
       }
 
-      // Apply sorting
       if (_sortBy == 'salary_asc') query.order('salary', ascending: true);
       if (_sortBy == 'salary_desc') query.order('salary', ascending: false);
       if (_sortBy == 'created_at_new') query.order('created_at', ascending: false);
@@ -150,12 +149,11 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
   }
 
   void _navigateToScreen(String route) {
-    Navigator.pushNamed(context, route);
+    FlexPathApp.navigateToScreen(context, route);
   }
 
   Future<void> _logout() async {
-    await supabase.auth.signOut();
-    Navigator.pushNamedAndRemoveUntil(context, '/homepage', (route) => false);
+    await FlexPathApp.logout(context);
   }
 
   void _applyFilters() {
@@ -197,7 +195,7 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.blue.shade100, Colors.white],
+            colors: [Colors.teal.shade100, Colors.purple.shade100],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -498,10 +496,14 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: SidebarMenu(
+        navigateToScreen: _navigateToScreen,
+        logout: _logout,
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.blue.shade100, Colors.white],
+            colors: [Colors.teal.shade100, Colors.purple.shade100],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -511,7 +513,6 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
             children: [
               Column(
                 children: [
-                  // Floating Filter Button
                   Padding(
                     padding: EdgeInsets.all(16.0),
                     child: Align(
@@ -523,7 +524,6 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
                       ),
                     ),
                   ),
-                  // Job List
                   Expanded(
                     child: _isLoading
                         ? Center(child: CircularProgressIndicator(color: Colors.teal))
@@ -665,14 +665,14 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
                   ),
                 ],
               ),
-              GlobalMenu(
-                navigateToScreen: _navigateToScreen,
-                logout: _logout,
-              ),
               _buildFilterDialog(),
             ],
           ),
         ),
+      ),
+      floatingActionButton: GlobalMenu(
+        navigateToScreen: _navigateToScreen,
+        logout: _logout,
       ),
     );
   }

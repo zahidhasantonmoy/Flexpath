@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'global_menu.dart';
+import 'sidebar_menu.dart';
+import 'main.dart';
 
 class RatingFeedbackScreen extends StatefulWidget {
   const RatingFeedbackScreen({super.key});
@@ -140,12 +142,11 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
   }
 
   void _navigateToScreen(String route) {
-    Navigator.pushNamed(context, route);
+    FlexPathApp.navigateToScreen(context, route);
   }
 
   Future<void> _logout() async {
-    await supabase.auth.signOut();
-    Navigator.pushNamedAndRemoveUntil(context, '/homepage', (route) => false);
+    await FlexPathApp.logout(context);
   }
 
   Widget _buildJobCard(String jobId, String jobTitle) {
@@ -161,7 +162,7 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.teal.shade100, Colors.white],
+              colors: [Colors.teal.shade100, Colors.purple.shade100],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -259,10 +260,14 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: SidebarMenu(
+        navigateToScreen: _navigateToScreen,
+        logout: _logout,
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.blue.shade100, Colors.white],
+            colors: [Colors.teal.shade100, Colors.purple.shade100],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -270,93 +275,97 @@ class _RatingFeedbackScreenState extends State<RatingFeedbackScreen> {
         child: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              return Column(
+              return Stack(
                 children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: constraints.maxHeight,
-                        ),
-                        child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              FadeInDown(
-                                duration: Duration(milliseconds: 800),
-                                child: Text(
-                                  _userFullName != null
-                                      ? 'Welcome, $_userFullName!'
-                                      : 'Welcome!',
-                                  style: TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blueGrey[700],
-                                    fontFamily: 'Poppins',
-                                    shadows: [
-                                      Shadow(
-                                        blurRadius: 10,
-                                        color: Colors.teal.withAlpha(77),
-                                        offset: Offset(0, 3),
+                  Column(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight,
+                            ),
+                            child: Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  FadeInDown(
+                                    duration: Duration(milliseconds: 800),
+                                    child: Text(
+                                      _userFullName != null
+                                          ? 'Welcome, $_userFullName!'
+                                          : 'Welcome!',
+                                      style: TextStyle(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blueGrey[700],
+                                        fontFamily: 'Poppins',
+                                        shadows: [
+                                          Shadow(
+                                            blurRadius: 10,
+                                            color: Colors.teal.withAlpha(77),
+                                            offset: Offset(0, 3),
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 10),
-                              FadeInDown(
-                                duration: Duration(milliseconds: 800),
-                                child: Text(
-                                  'Rate & Feedback',
-                                  style: TextStyle(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blueGrey[700],
-                                    fontFamily: 'Poppins',
-                                    shadows: [
-                                      Shadow(
-                                        blurRadius: 10,
-                                        color: Colors.teal.withAlpha(77),
-                                        offset: Offset(0, 3),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 20),
-                              if (_completedJobs.isNotEmpty)
-                                ..._completedJobs.map((job) => _buildJobCard(
-                                  job['job_id'],
-                                  job['jobs']['job_title'],
-                                )).toList()
-                              else
-                                Padding(
-                                  padding: EdgeInsets.all(16.0),
-                                  child: Text(
-                                    'No completed jobs to rate.',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.blueGrey[600],
-                                      fontFamily: 'Poppins',
                                     ),
                                   ),
-                                ),
-                            ],
+                                  SizedBox(height: 10),
+                                  FadeInDown(
+                                    duration: Duration(milliseconds: 800),
+                                    child: Text(
+                                      'Rate & Feedback',
+                                      style: TextStyle(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blueGrey[700],
+                                        fontFamily: 'Poppins',
+                                        shadows: [
+                                          Shadow(
+                                            blurRadius: 10,
+                                            color: Colors.teal.withAlpha(77),
+                                            offset: Offset(0, 3),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(height: 20),
+                                  if (_completedJobs.isNotEmpty)
+                                    ..._completedJobs.map((job) => _buildJobCard(
+                                      job['job_id'],
+                                      job['jobs']['job_title'],
+                                    )).toList()
+                                  else
+                                    Padding(
+                                      padding: EdgeInsets.all(16.0),
+                                      child: Text(
+                                        'No completed jobs to rate.',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.blueGrey[600],
+                                          fontFamily: 'Poppins',
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
+                  ),
+                  GlobalMenu(
+                    navigateToScreen: _navigateToScreen,
+                    logout: _logout,
                   ),
                 ],
               );
             },
           ),
         ),
-      ),
-      floatingActionButton: GlobalMenu(
-        navigateToScreen: _navigateToScreen,
-        logout: _logout,
       ),
     );
   }
