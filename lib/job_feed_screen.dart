@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:animate_do/animate_do.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:animate_do/animate_do.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'global_menu.dart';
 
 class JobFeedScreen extends StatefulWidget {
@@ -14,14 +15,38 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
   final SupabaseClient supabase = Supabase.instance.client;
   List<Map<String, dynamic>> jobs = [];
   bool _isLoading = true;
-  bool _isBengali = false;
   int _page = 0;
   final int _limit = 10;
   bool _hasMore = true;
   String? _selectedLocation;
   String? _selectedJobType;
+  String? _selectedJobCategory;
   DateTimeRange? _selectedDateRange;
+  String? _minSalary;
+  String? _maxSalary;
+  String? _searchQuery;
+  String? _sortBy;
   final ScrollController _scrollController = ScrollController();
+  final Map<String, List<Map<String, dynamic>>> _jobCache = {};
+
+  // Predefined filter options (aligned with JobPostScreen)
+  final List<String> _locations = [
+    'Dhaka', 'Chittagong', 'Khulna', 'Rajshahi', 'Sylhet', 'Barisal',
+    'Rangpur', 'Mymensingh', 'Rural Areas'
+  ];
+  final List<String> _jobTypes = [
+    'Full-time', 'Part-time', 'Temporary', 'Freelance', 'Internship', 'Contract-based'
+  ];
+  final List<String> _jobCategories = [
+    'Tutoring', 'Delivery', 'Freelance', 'Customer Service',
+    'Sales and Marketing', 'Data Entry', 'IT and Software',
+    'Healthcare and Medical', 'Engineering', 'Administration',
+    'Design and Creative', 'Construction and Labor', 'Finance and Accounting',
+    'Hospitality and Tourism', 'Manufacturing', 'Human Resources', 'Other'
+  ];
+  final List<String> _sortOptions = [
+    'salary_asc', 'salary_desc', 'created_at_new', 'created_at_old'
+  ];
 
   @override
   void initState() {
@@ -34,37 +59,72 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   Future<void> _fetchJobs({bool loadMore = false}) async {
     if (!loadMore) setState(() => _isLoading = true);
     try {
-      var query = supabase.from('jobs').select('*, users!employer_id(full_name)').eq('status', 'open');
+      String cacheKey = _getCacheKey();
+      if (_jobCache.containsKey(cacheKey) && !loadMore) {
+        setState(() {
+          jobs = _jobCache[cacheKey]!;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      var query = supabase
+          .from('jobs')
+          .select('*, users!employer_id(full_name)')
+          .eq('status', 'open');
 
       // Apply filters
-      if (_selectedLocation != null) query = query.eq('location', _selectedLocation!);
-      if (_selectedJobType != null) query = query.contains('skills', '{${_selectedJobType!}}');
+      if (_selectedLocation != null) query.eq('location', _selectedLocation!);
+      if (_selectedJobType != null) query.eq('job_type', _selectedJobType!);
+      if (_selectedJobCategory != null) query.eq('job_category', _selectedJobCategory!);
       if (_selectedDateRange != null) {
-        query = query
+        query
             .gte('created_at', _selectedDateRange!.start.toIso8601String())
             .lte('created_at', _selectedDateRange!.end.toIso8601String());
       }
+      if (_minSalary != null && _minSalary!.isNotEmpty) {
+        query.gte('salary', double.tryParse(_minSalary!) ?? 0.0);
+      }
+      if (_maxSalary != null && _maxSalary!.isNotEmpty) {
+        query.lte('salary', double.tryParse(_maxSalary!) ?? double.infinity);
+      }
+      if (_searchQuery != null && _searchQuery!.isNotEmpty) {
+        query.or('job_title.ilike.%$_searchQuery%,required_skills.ilike.%$_searchQuery%');
+      }
 
-      final response = await query
-          .range(_page * _limit, (_page + 1) * _limit - 1)
-          .order('created_at', ascending: false);
+      // Apply sorting
+      if (_sortBy == 'salary_asc') query.order('salary', ascending: true);
+      if (_sortBy == 'salary_desc') query.order('salary', ascending: false);
+      if (_sortBy == 'created_at_new') query.order('created_at', ascending: false);
+      if (_sortBy == 'created_at_old') query.order('created_at', ascending: true);
+
+      final response = await query.range(_page * _limit, (_page + 1) * _limit - 1);
 
       setState(() {
         if (loadMore) {
-          jobs.addAll(response as List<Map<String, dynamic>>);
+          jobs.addAll(response);
         } else {
-          jobs = response as List<Map<String, dynamic>>;
+          jobs = response;
+          _jobCache[cacheKey] = List.from(jobs);
         }
-        _hasMore = (response as List).length == _limit;
+        _hasMore = response.length == _limit;
         if (_hasMore) _page++;
         _isLoading = false;
       });
     } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load jobs: $e')),
+      );
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load jobs: $e')));
     }
   }
 
@@ -72,13 +132,19 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
     try {
       final userId = supabase.auth.currentUser?.id;
       if (userId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please sign in to save jobs')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Please sign in to save jobs')),
+        );
         return;
       }
       await supabase.from('saved_jobs').insert({'user_id': userId, 'job_id': jobId});
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Job saved successfully!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Job saved successfully!')),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save job: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save job: $e')),
+      );
     }
   }
 
@@ -97,6 +163,28 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
     _fetchJobs();
   }
 
+  String _getCacheKey() {
+    return '${_selectedLocation ?? ''}_${_selectedJobType ?? ''}_${_selectedJobCategory ?? ''}_'
+        '${_selectedDateRange?.start ?? ''}_${_selectedDateRange?.end ?? ''}_'
+        '${_minSalary ?? ''}_${_maxSalary ?? ''}_${_searchQuery ?? ''}_${_sortBy ?? ''}';
+  }
+
+  Widget _getJobIcon(List<dynamic>? skills) {
+    if (skills == null || skills.isEmpty) {
+      return Icon(FontAwesomeIcons.briefcase, color: Colors.teal, size: 40);
+    }
+    if (skills.contains('Flutter') || skills.contains('Dart')) {
+      return Icon(FontAwesomeIcons.code, color: Colors.teal, size: 40);
+    }
+    if (skills.contains('Photoshop') || skills.contains('Illustrator')) {
+      return Icon(FontAwesomeIcons.paintBrush, color: Colors.teal, size: 40);
+    }
+    if (skills.contains('Driving') || skills.contains('Navigation')) {
+      return Icon(FontAwesomeIcons.truck, color: Colors.teal, size: 40);
+    }
+    return Icon(FontAwesomeIcons.briefcase, color: Colors.teal, size: 40);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -110,191 +198,377 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
         ),
         child: SafeArea(
           child: Stack(
-            fit: StackFit.expand,
             children: [
               Column(
                 children: [
-                  // Filter Bar
-                  Container(
-                    padding: EdgeInsets.all(8.0),
-                    color: Colors.blueAccent.withOpacity(0.1),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          // Location Filter
-                          DropdownButton<String>(
-                            hint: Text('Location', style: TextStyle(color: Colors.blueGrey)),
-                            value: _selectedLocation,
-                            items: ['Dhaka', 'Chittagong', 'Sylhet', 'Khulna']
-                                .map((location) => DropdownMenuItem(value: location, child: Text(location, style: TextStyle(color: Colors.black))))
-                                .toList(),
-                            onChanged: (value) => setState(() => _selectedLocation = value),
-                          ),
-                          SizedBox(width: 10),
-                          // Job Type Filter
-                          DropdownButton<String>(
-                            hint: Text('Job Type', style: TextStyle(color: Colors.blueGrey)),
-                            value: _selectedJobType,
-                            items: ['typing', 'design', 'writing', 'development']
-                                .map((type) => DropdownMenuItem(value: type, child: Text(type, style: TextStyle(color: Colors.black))))
-                                .toList(),
-                            onChanged: (value) => setState(() => _selectedJobType = value),
-                          ),
-                          SizedBox(width: 10),
-                          // Date Range Filter
-                          ElevatedButton(
-                            onPressed: () async {
-                              final range = await showDateRangePicker(
-                                context: context,
-                                firstDate: DateTime(2025, 1, 1),
-                                lastDate: DateTime(2025, 12, 31),
-                                initialDateRange: _selectedDateRange,
-                              );
-                              setState(() => _selectedDateRange = range);
-                            },
-                            style: ButtonStyle(
-                              backgroundColor: WidgetStateProperty.all(Colors.blueAccent),
-                              shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-                            ),
-                            child: Text(
-                              _selectedDateRange == null ? 'Select Date' : 'Date Set',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                          // Apply Filters Button
-                          ElevatedButton(
-                            onPressed: _applyFilters,
-                            style: ButtonStyle(
-                              backgroundColor: WidgetStateProperty.all(Colors.green),
-                              shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-                            ),
-                            child: Text('Apply', style: TextStyle(color: Colors.white)),
-                          ),
-                          SizedBox(width: 10),
-                          // Bengali Toggle
-                          IconButton(
-                            icon: Icon(_isBengali ? Icons.language : Icons.translate, color: Colors.blueAccent),
-                            onPressed: () => setState(() => _isBengali = !_isBengali),
-                            tooltip: 'Toggle Language',
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Weather Suggestion (Simulated)
+                  // Filter Section
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    child: Row(
-                      children: [
-                        Icon(Icons.cloud, color: Colors.blueAccent),
-                        SizedBox(width: 8),
-                        Text(
-                          _selectedLocation == null
-                              ? 'Select a location for weather-based suggestions'
-                              : 'Weather in $_selectedLocation: Rainy - Indoor jobs recommended',
-                          style: TextStyle(color: Colors.blueGrey[600]),
+                    padding: EdgeInsets.all(16.0),
+                    child: Card(
+                      elevation: 8,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        side: BorderSide(color: Colors.teal.withOpacity(0.3), width: 1),
+                      ),
+                      color: Colors.white.withOpacity(0.95),
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            FadeInDown(
+                              duration: Duration(milliseconds: 800),
+                              child: Text(
+                                'Filter Jobs',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blueGrey[700],
+                                  fontFamily: 'Poppins',
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    value: _selectedLocation,
+                                    decoration: InputDecoration(
+                                      labelText: 'Location',
+                                      labelStyle: TextStyle(color: Colors.blueGrey[700]),
+                                      filled: true,
+                                      fillColor: Colors.white.withOpacity(0.9),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      prefixIcon: Icon(FontAwesomeIcons.mapMarkerAlt, color: Colors.teal),
+                                    ),
+                                    items: _locations.map((location) {
+                                      return DropdownMenuItem<String>(
+                                        value: location,
+                                        child: Text(location, style: TextStyle(fontFamily: 'Poppins')),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) => setState(() => _selectedLocation = value),
+                                    dropdownColor: Colors.white,
+                                    isExpanded: true,
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    value: _selectedJobType,
+                                    decoration: InputDecoration(
+                                      labelText: 'Job Type',
+                                      labelStyle: TextStyle(color: Colors.blueGrey[700]),
+                                      filled: true,
+                                      fillColor: Colors.white.withOpacity(0.9),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      prefixIcon: Icon(FontAwesomeIcons.clock, color: Colors.teal),
+                                    ),
+                                    items: _jobTypes.map((type) {
+                                      return DropdownMenuItem<String>(
+                                        value: type,
+                                        child: Text(type, style: TextStyle(fontFamily: 'Poppins')),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) => setState(() => _selectedJobType = value),
+                                    dropdownColor: Colors.white,
+                                    isExpanded: true,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    value: _selectedJobCategory,
+                                    decoration: InputDecoration(
+                                      labelText: 'Job Category',
+                                      labelStyle: TextStyle(color: Colors.blueGrey[700]),
+                                      filled: true,
+                                      fillColor: Colors.white.withOpacity(0.9),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      prefixIcon: Icon(FontAwesomeIcons.tag, color: Colors.teal),
+                                    ),
+                                    items: _jobCategories.map((category) {
+                                      return DropdownMenuItem<String>(
+                                        value: category,
+                                        child: Text(category, style: TextStyle(fontFamily: 'Poppins')),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) => setState(() => _selectedJobCategory = value),
+                                    dropdownColor: Colors.white,
+                                    isExpanded: true,
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: TextField(
+                                    decoration: InputDecoration(
+                                      labelText: 'Search (Title/Skills)',
+                                      labelStyle: TextStyle(color: Colors.blueGrey[700]),
+                                      filled: true,
+                                      fillColor: Colors.white.withOpacity(0.9),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      prefixIcon: Icon(FontAwesomeIcons.search, color: Colors.teal),
+                                    ),
+                                    style: TextStyle(fontFamily: 'Poppins'),
+                                    onChanged: (value) => setState(() => _searchQuery = value),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    decoration: InputDecoration(
+                                      labelText: 'Min Salary (BDT)',
+                                      labelStyle: TextStyle(color: Colors.blueGrey[700]),
+                                      filled: true,
+                                      fillColor: Colors.white.withOpacity(0.9),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      prefixIcon: Icon(FontAwesomeIcons.moneyBillWave, color: Colors.teal),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    style: TextStyle(fontFamily: 'Poppins'),
+                                    onChanged: (value) => setState(() => _minSalary = value),
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: TextField(
+                                    decoration: InputDecoration(
+                                      labelText: 'Max Salary (BDT)',
+                                      labelStyle: TextStyle(color: Colors.blueGrey[700]),
+                                      filled: true,
+                                      fillColor: Colors.white.withOpacity(0.9),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      prefixIcon: Icon(FontAwesomeIcons.moneyBillWave, color: Colors.teal),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    style: TextStyle(fontFamily: 'Poppins'),
+                                    onChanged: (value) => setState(() => _maxSalary = value),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () async {
+                                      final range = await showDateRangePicker(
+                                        context: context,
+                                        firstDate: DateTime(2025, 1, 1),
+                                        lastDate: DateTime(2025, 12, 31),
+                                        initialDateRange: _selectedDateRange,
+                                        builder: (context, child) => Theme(
+                                          data: ThemeData.light().copyWith(
+                                            colorScheme: ColorScheme.light(
+                                              primary: Colors.teal,
+                                              onPrimary: Colors.white,
+                                              surface: Colors.white,
+                                              onSurface: Colors.blueGrey[700]!,
+                                            ),
+                                          ),
+                                          child: child!,
+                                        ),
+                                      );
+                                      if (range != null) setState(() => _selectedDateRange = range);
+                                    },
+                                    style: ButtonStyle(
+                                      backgroundColor: WidgetStateProperty.all(Colors.teal),
+                                      shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                                      padding: WidgetStateProperty.all(EdgeInsets.symmetric(vertical: 16)),
+                                    ),
+                                    child: Text(
+                                      _selectedDateRange == null ? 'Select Date Range' : 'Date Range Set',
+                                      style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    value: _sortBy,
+                                    decoration: InputDecoration(
+                                      labelText: 'Sort By',
+                                      labelStyle: TextStyle(color: Colors.blueGrey[700]),
+                                      filled: true,
+                                      fillColor: Colors.white.withOpacity(0.9),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(15),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      prefixIcon: Icon(FontAwesomeIcons.sort, color: Colors.teal),
+                                    ),
+                                    items: _sortOptions.map((sort) {
+                                      return DropdownMenuItem<String>(
+                                        value: sort,
+                                        child: Text(
+                                          sort == 'salary_asc' ? 'Salary (Low to High)' :
+                                          sort == 'salary_desc' ? 'Salary (High to Low)' :
+                                          sort == 'created_at_new' ? 'Newest First' : 'Oldest First',
+                                          style: TextStyle(fontFamily: 'Poppins'),
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) => setState(() => _sortBy = value),
+                                    dropdownColor: Colors.white,
+                                    isExpanded: true,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 10),
+                            ZoomIn(
+                              duration: Duration(milliseconds: 300),
+                              child: ElevatedButton(
+                                onPressed: _applyFilters,
+                                style: ButtonStyle(
+                                  backgroundColor: WidgetStateProperty.all(Colors.purpleAccent),
+                                  shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                                  padding: WidgetStateProperty.all(EdgeInsets.symmetric(vertical: 16)),
+                                  elevation: WidgetStateProperty.all(5),
+                                  shadowColor: WidgetStateProperty.all(Colors.purpleAccent.withAlpha(128)),
+                                ),
+                                child: Text(
+                                  'Apply Filters',
+                                  style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                   // Job List
                   Expanded(
                     child: _isLoading
-                        ? Center(child: CircularProgressIndicator(color: Colors.green))
+                        ? Center(child: CircularProgressIndicator(color: Colors.teal))
                         : jobs.isEmpty
-                        ? Center(child: Text('No jobs available', style: TextStyle(color: Colors.blueGrey)))
+                        ? Center(
+                      child: Text(
+                        'No jobs available',
+                        style: TextStyle(
+                          color: Colors.blueGrey[700],
+                          fontFamily: 'Poppins',
+                          fontSize: 18,
+                        ),
+                      ),
+                    )
                         : ListView.builder(
                       controller: _scrollController,
                       padding: EdgeInsets.all(16.0),
                       itemCount: jobs.length + (_hasMore ? 1 : 0),
                       itemBuilder: (context, index) {
                         if (index == jobs.length) {
-                          return Center(child: CircularProgressIndicator(color: Colors.green));
+                          return Center(child: CircularProgressIndicator(color: Colors.teal));
                         }
                         final job = jobs[index];
                         return FadeInUp(
                           duration: Duration(milliseconds: 800),
                           delay: Duration(milliseconds: index * 200),
                           child: Card(
-                            elevation: 5,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                            color: Colors.white,
+                            elevation: 8,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                              side: BorderSide(color: Colors.teal.withOpacity(0.3), width: 1),
+                            ),
+                            color: Colors.white.withOpacity(0.95),
                             child: Padding(
                               padding: EdgeInsets.all(16.0),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Image or Icon
-                                  Container(
-                                    width: 50,
-                                    height: 50,
-                                    child: FutureBuilder(
-                                      future: _getImageUrl(job['id']),
-                                      builder: (context, snapshot) {
-                                        if (snapshot.connectionState == ConnectionState.waiting) {
-                                          return Center(child: CircularProgressIndicator(color: Colors.teal));
-                                        }
-                                        if (snapshot.hasData && snapshot.data != null) {
-                                          return ClipRRect(
-                                            borderRadius: BorderRadius.circular(10),
-                                            child: Image.network(
-                                              snapshot.data!,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) =>
-                                                  _getJobIcon(job['skills']),
-                                            ),
-                                          );
-                                        }
-                                        return _getJobIcon(job['skills']);
-                                      },
-                                    ),
-                                  ),
+                                  _getJobIcon(job['required_skills']),
                                   SizedBox(width: 16),
-                                  // Job Details
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          _isBengali ? _translateToBengali(job['title']) : job['title'] ?? 'No Title',
+                                          job['job_title'] ?? 'No Title',
                                           style: TextStyle(
                                             fontSize: 18,
                                             fontWeight: FontWeight.bold,
                                             color: Colors.teal,
+                                            fontFamily: 'Poppins',
                                           ),
                                         ),
                                         SizedBox(height: 4),
                                         Text(
-                                          'Location: ${job['location'] ?? 'N/A'}',
-                                          style: TextStyle(color: Colors.blueGrey[600]),
-                                        ),
-                                        Text(
-                                          'Pay: ${job['pay'] ?? 'N/A'} BDT',
+                                          'Category: ${job['job_category'] ?? 'N/A'}',
                                           style: TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.green,
+                                            color: Colors.blueGrey[600],
+                                            fontFamily: 'Poppins',
                                           ),
                                         ),
                                         Text(
-                                          'Skills: ${job['skills']?.join(', ') ?? 'N/A'}',
-                                          style: TextStyle(color: Colors.blueGrey[600]),
+                                          'Location: ${job['location'] ?? 'N/A'}',
+                                          style: TextStyle(
+                                            color: Colors.blueGrey[600],
+                                            fontFamily: 'Poppins',
+                                          ),
+                                        ),
+                                        Text(
+                                          'Salary: ${job['salary']?.toStringAsFixed(2) ?? 'N/A'} BDT',
+                                          style: TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.green,
+                                            fontFamily: 'Poppins',
+                                          ),
+                                        ),
+                                        Text(
+                                          'Skills: ${job['required_skills']?.join(', ') ?? 'N/A'}',
+                                          style: TextStyle(
+                                            color: Colors.blueGrey[600],
+                                            fontFamily: 'Poppins',
+                                          ),
                                         ),
                                         Text(
                                           'Posted by: ${job['users']?['full_name'] ?? 'Unknown'}',
-                                          style: TextStyle(color: Colors.blueGrey[600]),
+                                          style: TextStyle(
+                                            color: Colors.blueGrey[600],
+                                            fontFamily: 'Poppins',
+                                          ),
                                         ),
                                         Text(
-                                          'Match: 85%', // Simulated compatibility score
-                                          style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold),
+                                          'Match: 85%',
+                                          style: TextStyle(
+                                            color: Colors.blueAccent,
+                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'Poppins',
+                                          ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                  // Actions
                                   Column(
                                     children: [
                                       ZoomIn(
@@ -303,16 +577,22 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
                                           onPressed: () {},
                                           style: ButtonStyle(
                                             backgroundColor: WidgetStateProperty.all(Colors.teal),
-                                            shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+                                            shape: WidgetStateProperty.all(RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
                                             elevation: WidgetStateProperty.all(5),
-                                            shadowColor: WidgetStateProperty.all(Colors.green.withAlpha(128)),
+                                            shadowColor: WidgetStateProperty.all(Colors.teal.withAlpha(128)),
                                           ),
-                                          child: Text('Apply Now', style: TextStyle(color: Colors.white)),
+                                          child: Text(
+                                            'Apply Now',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontFamily: 'Poppins',
+                                            ),
+                                          ),
                                         ),
                                       ),
                                       SizedBox(height: 8),
                                       IconButton(
-                                        icon: Icon(Icons.bookmark_border, color: Colors.blueAccent),
+                                        icon: Icon(FontAwesomeIcons.bookmark, color: Colors.blueAccent),
                                         onPressed: () => _saveJob(job['id']),
                                         tooltip: 'Save Job',
                                       ),
@@ -328,7 +608,6 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
                   ),
                 ],
               ),
-              // Global Menu
               GlobalMenu(
                 navigateToScreen: _navigateToScreen,
                 logout: _logout,
@@ -338,34 +617,5 @@ class _JobFeedScreenState extends State<JobFeedScreen> {
         ),
       ),
     );
-  }
-
-  Future<String?> _getImageUrl(String jobId) async {
-    try {
-      final url = supabase.storage.from('job-images').getPublicUrl('$jobId/image.jpg');
-      return url;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Widget _getJobIcon(List<dynamic>? skills) {
-    if (skills == null) return Icon(Icons.work_outline, color: Colors.teal, size: 40);
-    if (skills.contains('design')) return Icon(Icons.brush, color: Colors.teal, size: 40);
-    if (skills.contains('writing')) return Icon(Icons.edit, color: Colors.teal, size: 40);
-    if (skills.contains('development')) return Icon(Icons.code, color: Colors.teal, size: 40);
-    return Icon(Icons.work_outline, color: Colors.teal, size: 40);
-  }
-
-  String _translateToBengali(String text) {
-    // Simulated translation (replace with actual translation API or mapping in production)
-    final translations = {
-      'Data Entry Clerk': 'ডাটা এন্ট্রি ক্লার্ক',
-      'Graphic Designer': 'গ্রাফিক ডিজাইনার',
-      'Delivery Rider': 'ডেলিভারি রাইডার',
-      'Content Writer': 'কন্টেন্ট রাইটার',
-      'Web Developer': 'ওয়েব ডেভেলপার',
-    };
-    return translations[text] ?? text;
   }
 }

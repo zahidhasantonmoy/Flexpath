@@ -6,6 +6,11 @@ import 'sign_up_screen.dart';
 import 'job_feed_screen.dart';
 import 'reset_password_screen.dart';
 import 'job_post_screen.dart';
+import 'profile_screen.dart';
+import 'search_screen.dart';
+import 'view_profile_screen.dart';
+import 'rating_feedback_screen.dart';
+import 'payment_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,14 +54,22 @@ class FlexPathApp extends StatelessWidget {
         ),
       ),
       debugShowCheckedModeBanner: false,
-      home: HomepageScreen(), // Removed const here
+      home: HomepageScreen(),
       routes: {
-        '/homepage': (context) => HomepageScreen(), // Removed const here as well
+        '/homepage': (context) => HomepageScreen(),
         '/signIn': (context) => SignInScreen(),
         '/signUp': (context) => SignUpScreen(),
         '/jobFeed': (context) => JobFeedScreen(),
         '/reset-password': (context) => ResetPasswordScreen(),
         '/jobPost': (context) => JobPostScreen(),
+        '/profile': (context) => ProfileScreen(),
+        '/search': (context) => SearchScreen(),
+        '/ratingFeedback': (context) => RatingFeedbackScreen(),
+        '/payment': (context) => PaymentScreen(),
+        '/viewProfile': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as String;
+          return ViewProfileScreen(userId: args);
+        },
       },
     );
   }
