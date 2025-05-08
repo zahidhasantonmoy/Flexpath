@@ -35,6 +35,8 @@ class FlexPathApp extends StatelessWidget {
     final restrictedRoutes = ['/homepage', '/signIn', '/signUp'];
 
     if (isAuthenticated && restrictedRoutes.contains(route)) {
+      // Redirect authenticated users trying to access restricted routes to job feed
+      Navigator.pushNamed(context, '/jobFeed');
       return;
     }
 
@@ -49,6 +51,7 @@ class FlexPathApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isAuthenticated = Supabase.instance.client.auth.currentUser != null;
+
     return MaterialApp(
       title: 'FlexPath',
       theme: ThemeData(
@@ -76,7 +79,7 @@ class FlexPathApp extends StatelessWidget {
         ),
       ),
       debugShowCheckedModeBanner: false,
-      initialRoute: isAuthenticated ? '/dashboard' : '/homepage',
+      initialRoute: isAuthenticated ? '/jobFeed' : '/homepage',
       routes: {
         '/homepage': (context) => const HomepageScreen(),
         '/signIn': (context) => const SignInScreen(),
